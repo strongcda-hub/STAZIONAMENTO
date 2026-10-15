@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>Allineamento Polare App</title>
+  
+  <!-- Configurazione per installazione come Web App (PWA) -->
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="theme-color" content="#050000">
+
+  <style>
+    :root {
+      --bg: #050000;
+      --card: #180000;
+      --text: #ff4d4d;
+      --accent: #ff0000;
+      --primary: #990000;
+      --btn-bg: #400000;
+    }
+
+    body {
+      margin: 0;
+      padding: 12px;
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      user-select: none;
+    }
+
+    .container {
+      max-width: 420px;
+      margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 4px;
+    }
+
+    h3 {
+      margin: 0;
+      font-size: 1.2rem;
+      letter-spacing: 0.5px;
+    }
+
+    .card {
+      background: var(--card);
+      border-radius: 12px;
+      padding: 14px;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.8);
+      border: 1px solid rgba(255, 0, 0, 0.15);
+    }
+
+    .btn {
+      background: var(--btn-bg);
+      color: #fff;
+      border: 1px solid var(--accent);
+      padding: 14px;
+      border-radius: 8px;
+      font-weight: bold;
+      width: 100%;
+      font-size: 1rem;
+      cursor: pointer;
+      box-shadow: 0 0 10px rgba(255, 0, 0, 0.2);
+    }
+
+    .btn:active {
+      background: var(--primary);
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin-top: 8px;
+    }
+
+    .box {
+      background: rgba(0,0,0,0.4);
+      padding: 8px;
+      border-radius: 6px;
+      text-align: center;
+      border: 1px solid rgba(255,0,0,0.05);
+    }
+
+    .val {
+      font-size: 1.1rem;
+      font-weight: bold;
+      color: #fff;
+      margin-top: 2px;
+    }
+
+    /* Reticolo Polar Scope */
+    .polar-scope {
+      width: 180px;
+      height: 180px;
+      margin: 10px auto;
+      border: 2px solid var(--text);
+      border-radius: 50%;
+      position: relative;
+      background: radial-gradient(circle, #050000 0%, #100000 100%);
+      box-shadow: inset 0 0 15px rgba(255,0,0,0.2);
+    }
+
+    .cross-h, .cross-v {
+      position: absolute;
+      background: rgba(255,0,0,0.3);
+    }
+    .cross-h { top: 50%; left: 0; right: 0; height: 1px; }
+    .cross-v { left: 50%; top: 0; bottom: 0; width: 1px; }
+
+    .ring {
+      position: absolute;
+      top: 22px; left: 22px; right: 22px; bottom: 22px;
+      border: 1px dashed rgba(255,0,0,0.4);
+      border-radius: 50%;
+    }
+
+    .dot {
+      width: 12px;
+      height: 12px;
+      background: #ff0;
+      border-radius: 50%;
+      position: absolute;
+      transform: translate(-50%, -50%);
+      box-shadow: 0 0 8px #ff0;
+    }
+
+    /* Livella e Slider */
+    .level-bar {
+      width: 100%;
+      height: 18px;
+      background: rgba(0, 0, 0, 0.4);
+      border-radius: 9px;
+      position: relative;
+      overflow: hidden;
+      margin-top: 8px;
+      border: 1px solid rgba(255,0,0,0.2);
+    }
+
+    .level-bubble {
+      width: 18px;
+      height: 100%;
+      background: var(--text);
+      position: absolute;
+      top: 0;
+      left: 50%;
+      transform: translateX(-50%);
+      border-radius: 50%;
+      box-shadow: 0 0 5px var(--text);
+    }
+
+    .slider-input {
+      width: 100%;
+      margin: 8px 0;
+      accent-color: var(--text);
+    }
+  </style>
+</head>
+<body>
+
+<div class="container">
+  <div class="header">
+    <h3>🧭 ALLINEAMENTO POLARE</h3>
+  </div>
+
+  <div class="card">
+    <button class="btn" id="start-btn" onclick="initHardware()">📡 ABILITA SENSORI & GPS</button>
+    <div id="status" style="text-align:center; font-size:0.8rem; margin-top:6px; opacity:0.8;">Tocca per attivare GPS, Inclinazione e Giroscopio</div>
+  </div>
+
+  <div class="card">
+    <b>📍 Posizione & Ora Siderale</b>
+    <div class="grid">
+      <div class="box">Latitudine<div class="val" id="lat-display">45.00° N</div></div>
+      <div class="box">Longitudine<div class="val" id="lon-display">9.00° E</div></div>
+      <div class="box">Ora Siderale (LST)<div class="val" id="lst-val">--:--</div></div>
+      <div class="box">Angolo Polare<div class="val" id="ha-val">--h --m</div></div>
+    </div>
+  </div>
+
+  <div class="card" style="text-align:center;">
+    <b>👁️ Vista Cannocchiale Polare</b>
+    <div class="polar-scope">
+      <div class="cross-h"></div>
+      <div class="cross-v"></div>
+      <div class="ring"></div>
+      <div class="dot" id="p-dot" style="top:50%; left:50%;"></div>
+    </div>
+    <div id="clock-pos" style="font-weight:bold; font-size:0.95rem;">Rilevamento in corso...</div>
+  </div>
+
+  <!-- INCLINAZIONE LATITUDINE -->
+  <div class="card">
+    <div style="display:flex; justify-content:space-between; align-items:center;">
+      <b>📐 Inclinazione Asse R.A. (Altezza)</b>
+      <span id="pitch-val" style="font-weight:bold;">45.0°</span>
+    </div>
+    <div class="level-bar">
+      <div class="level-bubble" id="level-bubble"></div>
+    </div>
+    <input type="range" class="slider-input" id="pitch-slider" min="0" max="90" step="0.1" value="45" oninput="manualPitch(this.value)">
+    <div style="font-size:0.75rem; opacity:0.8; text-align:center;">Puoi usare il sensore o regolare manualmente qui sopra</div>
+  </div>
+
+  <!-- ROTAZIONE AZIMUT -->
+  <div class="card">
+    <div style="display:flex; justify-content:space-between; align-items:center;">
+      <b>🔄 Azimut (Spostamento Nord)</b>
+      <span id="yaw-val" style="font-weight:bold;">0.0°</span>
+    </div>
+    <div class="grid">
+      <button class="btn" style="padding:8px;" onclick="resetYaw()">🎯 AZZERA NORD</button>
+      <div class="box" id="yaw-status">In attesa</div>
+    </div>
+    <input type="range" class="slider-input" id="yaw-slider" min="-30" max="30" step="0.5" value="0" oninput="manualYaw(this.value)">
+  </div>
+</div>
+
+<script>
+let lat = 45.0, lon = 9.0;
+let lastTimestamp = 0;
+let currentYaw = 0;
+let sensorMode = false;
+
+function initHardware() {
+  const status = document.getElementById('status');
+
+  // GPS Posizione
+  if (navigator.geolocation) {
+    navigator.geolocation.getCurrentPosition(p => {
+      lat = p.coords.latitude;
+      lon = p.coords.longitude;
+      document.getElementById('lat-display').innerText = lat.toFixed(2) + '° N';
+      document.getElementById('lon-display').innerText = lon.toFixed(2) + '° E';
+      document.getElementById('pitch-slider').value = lat.toFixed(1);
+      manualPitch(lat);
+      updatePolaris();
+    }, () => {
+      status.innerText = "GPS non disponibile. Uso coordinate predefinite.";
+    });
+  }
+
+  // Abilita Giroscopio / Accelerometro
+  if (typeof DeviceMotionEvent !== 'undefined' && typeof DeviceMotionEvent.requestPermission === 'function') {
+    DeviceMotionEvent.requestPermission().then(response => {
+      if (response === 'granted') {
+        window.addEventListener('devicemotion', handleMotion);
+        sensorMode = true;
+        status.innerText = "✅ Sensori Smartphone Attivi!";
+      } else {
+        status.innerText = "⚠️ Autorizzazione negata. Uso modalità manuale.";
+      }
+    });
+  } else {
+    window.addEventListener('devicemotion', handleMotion);
+    sensorMode = true;
+    status.innerText = "✅ Sensori Smartphone Attivi!";
+  }
+
+  setInterval(updatePolaris, 1000);
+  updatePolaris();
+}
+
+function handleMotion(event) {
+  if (!sensorMode) return;
+
+  // 1. Inclinazione (Pitch)
+  const acc = event.accelerationIncludingGravity;
+  if (acc && acc.z !== null && acc.y !== null) {
+    let pitch = Math.abs(Math.atan2(acc.y, acc.z) * (180 / Math.PI));
+    document.getElementById('pitch-slider').value = pitch.toFixed(1);
+    manualPitch(pitch);
+  }
+
+  // 2. Azimut (Yaw)
+  const gyro = event.rotationRate;
+  if (gyro && gyro.alpha !== null) {
+    const now = Date.now();
+    if (lastTimestamp > 0) {
+      const dt = (now - lastTimestamp) / 1000;
+      currentYaw += gyro.alpha * dt;
+      document.getElementById('yaw-slider').value = currentYaw.toFixed(1);
+      manualYaw(currentYaw);
+    }
+    lastTimestamp = now;
+  }
+}
+
+function manualPitch(val) {
+  let v = parseFloat(val);
+  document.getElementById('pitch-val').innerText = v.toFixed(1) + '°';
+  
+  let err = v - lat;
+  let bubbleOffset = 50 + (err * 8); // 8% di spostamento per grado
+  bubbleOffset = Math.max(5, Math.min(95, bubbleOffset));
+  document.getElementById('level-bubble').style.left = bubbleOffset + '%';
+}
+
+function manualYaw(val) {
+  let v = parseFloat(val);
+  document.getElementById('yaw-val').innerText = (v > 0 ? '+' : '') + v.toFixed(1) + '°';
+
+  const statusEl = document.getElementById('yaw-status');
+  if (Math.abs(v) < 1.5) {
+    statusEl.innerText = "🎯 CENTRATO";
+    statusEl.style.color = "#00ff00";
+  } else if (v > 0) {
+    statusEl.innerText = "⬅️ Ruota Sinistra";
+    statusEl.style.color = "var(--text)";
+  } else {
+    statusEl.style.color = "var(--text)";
+    statusEl.innerText = "Ruota Destra ➡️";
+  }
+}
+
+function resetYaw() {
+  currentYaw = 0;
+  document.getElementById('yaw-slider').value = 0;
+  manualYaw(0);
+}
+
+function updatePolaris() {
+  const now = new Date();
+  const JD = (now.getTime() / 86400000) + 2440587.5;
+  const D = JD - 2451545.0;
+  let GMST = (18.697374558 + 24.06570982441908 * D) % 24;
+  if (GMST < 0) GMST += 24;
+  let LST = (GMST + (lon / 15.0)) % 24;
+  if (LST < 0) LST += 24;
+
+  let HA = LST - 2.88;
+  if (HA < 0) HA += 24;
+
+  document.getElementById('lst-val').innerText = Math.floor(LST).toString().padStart(2, '0') + ':' + String(Math.floor((LST%1)*60)).padStart(2,'0');
+  document.getElementById('ha-val').innerText = Math.floor(HA) + 'h ' + Math.floor((HA%1)*60) + 'm';
+
+  const rad = (HA / 24) * 2 * Math.PI - (Math.PI / 2);
+  const x = 90 + 68 * Math.cos(rad);
+  const y = 90 + 68 * Math.sin(rad);
+
+  const dot = document.getElementById('p-dot');
+  dot.style.left = x + 'px';
+  dot.style.top = y + 'px';
+
+  let hr = Math.round((HA / 24) * 12);
+  if (hr === 0) hr = 12;
+  document.getElementById('clock-pos').innerText = `Polare a ore ${hr}:00 nel reticolo`;
+}
+</script>
+</body>
+</html>
