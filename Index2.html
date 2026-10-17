@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>AstroDSC Push-To Pro - Natural Starfield</title>
+    <title>AstroDSC Push-To Pro - GPS Sync</title>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; touch-action: none; }
         html, body {
@@ -110,7 +110,7 @@
 <body>
 
     <div id="hud-top">
-        <div>TEL: <span id="phoneCoords" class="hud-val">45°/0°</span></div>
+        <div>GPS: <span id="gpsStatus" class="hud-val">ACQUISIZIONE...</span></div>
         <div>TARGET: <span id="targetCoords" class="hud-val">--/--</span></div>
         <div>Δ: <span id="deltaCoords" class="hud-val">--/--</span></div>
     </div>
@@ -153,7 +153,7 @@
                 <button class="filter-btn" onclick="setFilter('Planet', this)">PIANETI</button>
             </div>
 
-            <button onclick="requestSensors()" style="width:100%; margin-top:8px;">ATTIVA SENSORI MOVIMENTO</button>
+            <button onclick="requestSensors()" style="width:100%; margin-top:8px;">ATTIVA SENSORI GPS & BUSSOLA</button>
         </div>
     </div>
 
@@ -204,7 +204,6 @@
             "Izar": { ra: 14.76, dec: 27.07, mag: 2.37, ox: 6, oy: 4 }
         };
 
-        // Generatore Deterministico Pseudo-Casuale per Stelle di Campo Naturali (Nessuna griglia)
         function pseudoRandom(seed) {
             let x = Math.sin(seed) * 10000;
             return x - Math.floor(x);
@@ -284,19 +283,13 @@
 
         function getLST() {
             const now = new Date();
-            const year = now.getUTCFullYear();
-            const month = now.getUTCMonth() + 1;
-            const day = now.getUTCDate();
-            const hour = now.getUTCHours() + now.getUTCMinutes() / 60.0 + now.getUTCSeconds() / 3600.0;
-
-            let a = Math.floor((14 - month) / 12);
-            let y = year + 4800 - a;
-            let m = month + 12 * a - 3;
-            let jd = day + Math.floor((153 * m + 2) / 5) + 365 * y + Math.floor(y / 4) - Math.floor(y / 100) + Math.floor(y / 400) - 32045 + (hour - 12) / 24.0;
-            let d = jd - 2451545.0;
-            let gmst = (280.46061837 + 360.98564736629 * d) % 360;
+            const jd = (now.getTime() / 86400000) + 2440587.5;
+            const d = jd - 2451545.0;
+            let gmst = 280.46061837 + 360.98564736629 * d;
+            gmst = gmst % 360;
             if (gmst < 0) gmst += 360;
-            return (gmst + userLon + 360) % 360;
+            let lst = gmst + userLon;
+            return (lst % 360 + 360) % 360;
         }
 
         function updateMoonInfo() {
@@ -328,23 +321,17 @@
             if (pElem) pElem.textContent = phaseName;
             const iElem = document.getElementById("moonIllum");
             if (iElem) iElem.textContent = illumination;
-
-            let riseHour = Math.floor((cyclePhase * 24 + 6) % 24);
-            let setHour = Math.floor((riseHour + 12) % 24);
-            const rElem = document.getElementById("moonRise");
-            if (rElem) rElem.textContent = `${String(riseHour).padStart(2,'0')}:00`;
-            const sElem = document.getElementById("moonSet");
-            if (sElem) sElem.textContent = `${String(setHour).padStart(2,'0')}:00`;
         }
 
         function raDecToAltAz(raHours, decDeg, lstDeg) {
             const raDeg = raHours * 15;
-            const haRad = ((lstDeg - raDeg + 360) % 360) * Math.PI / 180;
+            const haDeg = (lstDeg - raDeg + 360) % 360;
+            const haRad = haDeg * Math.PI / 180;
             const latRad = userLat * Math.PI / 180;
             const decRad = decDeg * Math.PI / 180;
 
             const sinAlt = Math.sin(decRad) * Math.sin(latRad) + Math.cos(decRad) * Math.cos(latRad) * Math.cos(haRad);
-            const altRad = Math.asin(sinAlt);
+            const altRad = Math.asin(Math.max(-1, Math.min(1, sinAlt)));
             const altDeg = altRad * 180 / Math.PI;
 
             let cosAz = (Math.sin(decRad) - Math.sin(latRad) * Math.sin(altRad)) / (Math.cos(latRad) * Math.cos(altRad));
@@ -390,9 +377,6 @@
             const now = Date.now();
             const isBlinkOn = Math.floor(now / 350) % 2 === 0;
 
-            const pElem = document.getElementById("phoneCoords");
-            if (pElem) pElem.textContent = `${phoneAlt.toFixed(0)}°/${phoneAz.toFixed(0)}°`;
-
             // 1. TERRENO E ORIZZONTE
             let horizonY = cy + phoneAlt * scale;
             if (horizonY < canvas.height + 300) {
@@ -433,7 +417,6 @@
                 while (dAz < -180) dAz += 360;
 
                 let dAlt = coords.alt - phoneAlt;
-
                 let x = cx + dAz * scale;
                 let y = cy - dAlt * scale;
 
@@ -662,9 +645,16 @@
             }
         }
 
+        // GESTIONE ORIENTAMENTO CON BUSSOLA ABSOLUTE O STANDARD
         function handleOrientation(e) {
             if (e.alpha !== null && e.beta !== null) {
-                phoneAz = (360 - e.alpha) % 360;
+                // Sfrutta absoluteorientation o alpha standard corretto per il nord magnetico/geografico
+                let az = e.webkitCompassHeading || e.alpha;
+                // Se viene usata la bussola standard Android (alpha antiorario), la invertiamo correttamente
+                if (!e.webkitCompassHeading) {
+                    az = (360 - e.alpha) % 360;
+                }
+                phoneAz = az;
                 phoneAlt = e.beta;
             }
         }
@@ -700,6 +690,7 @@
                     isDragging = true;
                     startX = e.clientX;
                     startY = e.clientY;
+                    document.getElementById("gpsStatus").textContent = "GPS ATTIVO";
                 }
             });
 
@@ -715,13 +706,19 @@
 
             window.addEventListener('mouseup', () => isDragging = false);
 
+            // ACQUISIZIONE GPS OBBLIGATORIA E PRECISA
             if (navigator.geolocation) {
-                navigator.geolocation.getCurrentPosition(pos => {
+                navigator.geolocation.watchPosition(pos => {
                     userLat = pos.coords.latitude;
                     userLon = pos.coords.longitude;
+                    document.getElementById("gpsStatus").textContent = `${userLat.toFixed(2)}°, ${userLon.toFixed(2)}°`;
                     updateMoonInfo();
                     updateTonightDropdown();
-                });
+                }, err => {
+                    document.getElementById("gpsStatus").textContent = "ERRORE GPS (DEFAULT)";
+                }, { enableHighAccuracy: true, maximumAge: 0, timeout: 10000 });
+            } else {
+                document.getElementById("gpsStatus").textContent = "NON SUPPORTATO";
             }
 
             updateMoonInfo();
