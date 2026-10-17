@@ -1,0 +1,734 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>AstroDSC Push-To Pro - Natural Starfield</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; touch-action: none; }
+        html, body {
+            width: 100%; height: 100%;
+            background-color: #000000 !important;
+            color: #ff3333;
+            font-family: 'Courier New', Courier, monospace;
+            overflow: hidden;
+        }
+
+        #skyCanvas {
+            position: absolute; top: 0; left: 0;
+            width: 100vw; height: 100vh;
+            background-color: #000000 !important;
+            z-index: 1;
+            display: block;
+        }
+
+        #hud-top {
+            position: absolute; top: 10px; left: 10px; right: 10px;
+            z-index: 10;
+            background: rgba(30, 0, 0, 0.90);
+            border: 1.5px solid #00ff00; border-radius: 6px;
+            padding: 6px 10px; font-size: 11px;
+            display: flex; justify-content: space-between; align-items: center;
+            color: #ff4444;
+        }
+
+        .hud-val { color: #ff6666; font-weight: bold; }
+
+        #hud-bottom {
+            position: absolute; bottom: 10px; left: 10px; right: 10px;
+            z-index: 10;
+            background: rgba(25, 0, 0, 0.95);
+            border: 1.5px solid #00ff00; border-radius: 8px;
+            padding: 8px;
+        }
+
+        .row-flex { display: flex; gap: 6px; align-items: center; }
+
+        select, input[type="text"] {
+            background: #200000 !important;
+            color: #ff4444 !important;
+            border: 1.5px solid #00ff00 !important;
+            padding: 8px;
+            border-radius: 4px;
+            font-family: inherit; font-size: 11px;
+            width: 100%; outline: none;
+        }
+
+        button {
+            background: #2b0000;
+            color: #ff6666;
+            border: 1.5px solid #00ff00;
+            padding: 8px 12px;
+            border-radius: 4px;
+            font-family: inherit; font-weight: bold;
+            font-size: 11px; cursor: pointer; white-space: nowrap;
+        }
+
+        button:active { background: #550000; color: #ffffff; }
+
+        #zoom-controls {
+            position: absolute; right: 15px; bottom: 120px;
+            z-index: 10; display: flex; flex-direction: column; gap: 8px;
+        }
+
+        .zoom-btn {
+            width: 40px; height: 40px; border-radius: 50%;
+            font-size: 18px; padding: 0; display: flex;
+            align-items: center; justify-content: center;
+            background: rgba(40, 0, 0, 0.9); border: 2px solid #00ff00;
+        }
+
+        #advanced-menu {
+            display: none; margin-top: 8px;
+            border-top: 1px dashed #00ff00; padding-top: 8px;
+            font-size: 11px;
+        }
+
+        .filter-btn-group { display: flex; gap: 4px; margin-top: 6px; }
+        .filter-btn { flex: 1; padding: 6px; font-size: 10px; background: #200000; border: 1.5px solid #00ff00; color: #ff5555; }
+        .filter-btn.active { background: #660000; color: #ffffff; border-color: #00ff00; }
+
+        .moon-box {
+            background: #1e0000;
+            border: 1.5px solid #00ff00;
+            padding: 6px 8px;
+            border-radius: 4px;
+            margin-bottom: 6px;
+            color: #ff4444;
+        }
+
+        #bingo-banner {
+            position: absolute; top: 60px; left: 50%;
+            transform: translateX(-50%); z-index: 20;
+            background: rgba(40, 0, 0, 0.95); border: 2px solid #ff0000;
+            color: #ff3333; padding: 10px 20px; border-radius: 8px;
+            text-align: center; display: none; width: 85%; max-width: 300px;
+            box-shadow: 0 0 20px rgba(255, 0, 0, 0.8);
+        }
+    </style>
+</head>
+<body>
+
+    <div id="hud-top">
+        <div>TEL: <span id="phoneCoords" class="hud-val">45°/0°</span></div>
+        <div>TARGET: <span id="targetCoords" class="hud-val">--/--</span></div>
+        <div>Δ: <span id="deltaCoords" class="hud-val">--/--</span></div>
+    </div>
+
+    <div id="bingo-banner">
+        <div style="font-size:16px; font-weight:bold; color:#ff0000;">BINGO! TARGET CENTRATO</div>
+        <div style="font-size:10px; margin-top:2px;" id="bingoInfo">Oggetto nel campo dell'oculare</div>
+    </div>
+
+    <canvas id="skyCanvas"></canvas>
+
+    <div id="zoom-controls">
+        <button class="zoom-btn" onclick="zoomIn()">+</button>
+        <button class="zoom-btn" onclick="zoomOut()">−</button>
+    </div>
+
+    <div id="hud-bottom">
+        <div class="row-flex">
+            <select id="tonightSelect" onchange="onSelectTonight()">
+                <option value="">★ OSSERVABILI STASERA...</option>
+            </select>
+            <button onclick="toggleMenu()">⚙ MENU</button>
+        </div>
+
+        <div id="advanced-menu">
+            <div class="moon-box">
+                🌙 <b>LUNA:</b> <span id="moonPhaseName" class="hud-val">-</span> (<span id="moonIllum" class="hud-val">-</span>%) 
+                | Sorge: <span id="moonRise" class="hud-val">--:--</span> | Tramonta: <span id="moonSet" class="hud-val">--:--</span>
+            </div>
+
+            <label style="color:#ff6666; display:block; margin-bottom:2px;">Cerca Catalogo Completo:</label>
+            <input type="text" id="searchInput" placeholder="es. M31, NGC 7000, Albireo, Saturno..." oninput="filterCatalog()">
+            
+            <select id="targetSelect" onchange="onSelectTarget()" style="margin-top:4px;"></select>
+
+            <div class="filter-btn-group">
+                <button class="filter-btn active" onclick="setFilter('ALL', this)">TUTTI</button>
+                <button class="filter-btn" onclick="setFilter('DSO', this)">MESSIER/NGC</button>
+                <button class="filter-btn" onclick="setFilter('Double', this)">DOPPIE</button>
+                <button class="filter-btn" onclick="setFilter('Planet', this)">PIANETI</button>
+            </div>
+
+            <button onclick="requestSensors()" style="width:100%; margin-top:8px;">ATTIVA SENSORI MOVIMENTO</button>
+        </div>
+    </div>
+
+    <script>
+        const stars = {
+            "Polaris": { ra: 2.53, dec: 89.26, mag: 1.97, ox: 5, oy: -5 },
+            "Dubhe": { ra: 11.06, dec: 61.75, mag: 1.79, ox: 5, oy: 5 }, 
+            "Merak": { ra: 11.03, dec: 56.38, mag: 2.37, ox: 5, oy: 5 },
+            "Phecda": { ra: 11.90, dec: 53.69, mag: 2.44, ox: 5, oy: 5 }, 
+            "Megrez": { ra: 12.25, dec: 57.03, mag: 3.31, ox: 5, oy: -5 },
+            "Alioth": { ra: 12.90, dec: 55.96, mag: 1.77, ox: 5, oy: -5 }, 
+            "Mizar": { ra: 13.40, dec: 54.92, mag: 2.23, ox: 5, oy: -5 },
+            "Alkaid": { ra: 13.79, dec: 49.31, mag: 1.86, ox: 5, oy: 5 },
+            "Shedar": { ra: 0.68, dec: 56.54, mag: 2.24, ox: 6, oy: -2 }, 
+            "Caph": { ra: 0.15, dec: 59.15, mag: 2.28, ox: 6, oy: -2 },
+            "GammaCas": { ra: 0.94, dec: 60.72, mag: 2.15, ox: 6, oy: -2 }, 
+            "Ruchbah": { ra: 1.43, dec: 60.24, mag: 2.68, ox: 6, oy: -2 },
+            "Segin": { ra: 1.90, dec: 63.67, mag: 3.35, ox: 6, oy: -2 },
+            "Vega": { ra: 18.62, dec: 38.78, mag: 0.03, ox: 8, oy: 3 }, 
+            "Sheliak": { ra: 18.83, dec: 33.36, mag: 3.52, ox: 8, oy: 3 },
+            "Sulafat": { ra: 18.98, dec: 32.69, mag: 3.25, ox: 5, oy: -8 }, 
+            "Eps Lyr": { ra: 18.74, dec: 39.67, mag: 4.67, ox: 8, oy: -8 },
+            "Zeta Lyr": { ra: 18.75, dec: 37.60, mag: 4.34, ox: -35, oy: -5 },
+            "Deneb": { ra: 20.69, dec: 45.28, mag: 1.25, ox: 6, oy: -4 }, 
+            "Sadr": { ra: 20.37, dec: 40.26, mag: 2.23, ox: 6, oy: 10 },
+            "Gienah": { ra: 20.77, dec: 33.97, mag: 2.48, ox: 6, oy: -4 }, 
+            "Delta Cyg": { ra: 19.75, dec: 45.13, mag: 2.86, ox: 6, oy: -4 },
+            "Albireo": { ra: 19.51, dec: 27.96, mag: 3.05, ox: 6, oy: -4 },
+            "Altair": { ra: 19.84, dec: 8.87, mag: 0.77, ox: 6, oy: -4 }, 
+            "Tarazed": { ra: 19.77, dec: 10.61, mag: 2.72, ox: 6, oy: -8 },
+            "Alshain": { ra: 19.92, dec: 6.41, mag: 3.71, ox: 6, oy: 8 },
+            "Kornephoros": { ra: 16.50, dec: 21.49, mag: 2.78, ox: 6, oy: 4 }, 
+            "Rutilicus": { ra: 16.69, dec: 31.60, mag: 2.81, ox: 6, oy: 4 },
+            "Sarin": { ra: 17.25, dec: 24.84, mag: 3.12, ox: 6, oy: 4 }, 
+            "Rasgethi": { ra: 17.24, dec: 14.38, mag: 3.31, ox: 6, oy: 4 },
+            "Alpheratz": { ra: 0.14, dec: 29.09, mag: 2.06, ox: 6, oy: -4 }, 
+            "Mirach": { ra: 1.16, dec: 35.62, mag: 2.07, ox: 6, oy: 8 },
+            "Almach": { ra: 2.06, dec: 42.33, mag: 2.10, ox: 6, oy: 4 }, 
+            "Scheat": { ra: 23.06, dec: 28.08, mag: 2.42, ox: 6, oy: -4 },
+            "Markab": { ra: 23.08, dec: 15.21, mag: 2.49, ox: 6, oy: 4 }, 
+            "Algenib": { ra: 0.22, dec: 15.18, mag: 2.83, ox: 6, oy: 4 },
+            "Mirfak": { ra: 3.40, dec: 49.86, mag: 1.79, ox: 6, oy: 4 }, 
+            "Algol": { ra: 3.14, dec: 40.95, mag: 2.12, ox: 6, oy: 4 },
+            "Capella": { ra: 5.28, dec: 46.00, mag: 0.08, ox: 6, oy: 4 }, 
+            "Menkalinan": { ra: 5.99, dec: 44.95, mag: 1.90, ox: 6, oy: 4 },
+            "Aldebaran": { ra: 4.60, dec: 16.51, mag: 0.85, ox: 6, oy: 4 },
+            "Arturo": { ra: 14.26, dec: 19.18, mag: -0.05, ox: 6, oy: 4 }, 
+            "Izar": { ra: 14.76, dec: 27.07, mag: 2.37, ox: 6, oy: 4 }
+        };
+
+        // Generatore Deterministico Pseudo-Casuale per Stelle di Campo Naturali (Nessuna griglia)
+        function pseudoRandom(seed) {
+            let x = Math.sin(seed) * 10000;
+            return x - Math.floor(x);
+        }
+
+        for (let i = 0; i < 280; i++) {
+            let r = pseudoRandom(i * 1.3) * 24;
+            let d = (pseudoRandom(i * 2.7) * 110) - 20;
+            let m = 3.8 + pseudoRandom(i * 4.1) * 2.0;
+            stars[`s_field_${i}`] = { ra: r, dec: d, mag: m, isField: true };
+        }
+
+        const constellationLines = [
+            ["Dubhe", "Merak"], ["Merak", "Phecda"], ["Phecda", "Megrez"], ["Megrez", "Dubhe"],
+            ["Megrez", "Alioth"], ["Alioth", "Mizar"], ["Mizar", "Alkaid"],
+            ["Caph", "Shedar"], ["Shedar", "GammaCas"], ["GammaCas", "Ruchbah"], ["Ruchbah", "Segin"],
+            ["Vega", "Eps Lyr"], ["Vega", "Zeta Lyr"], ["Zeta Lyr", "Sheliak"], ["Sheliak", "Sulafat"], ["Zeta Lyr", "Sulafat"],
+            ["Deneb", "Sadr"], ["Sadr", "Albireo"], ["Sadr", "Gienah"], ["Sadr", "Delta Cyg"],
+            ["Altair", "Tarazed"], ["Altair", "Alshain"],
+            ["Rutilicus", "Kornephoros"], ["Rutilicus", "Sarin"], ["Sarin", "Rasgethi"],
+            ["Scheat", "Markab"], ["Markab", "Algenib"], ["Algenib", "Alpheratz"], ["Alpheratz", "Scheat"],
+            ["Alpheratz", "Mirach"], ["Mirach", "Almach"],
+            ["Mirfak", "Algol"], ["Mirfak", "Almach"],
+            ["Capella", "Menkalinan"], ["Arturo", "Izar"]
+        ];
+
+        const rawCatalog = [
+            { id: "M1", name: "Nebulosa Granchio", type: "DSO", ra: 5.575, dec: 22.014, mag: 8.4 },
+            { id: "M2", name: "Ammasso Globulare Acquario", type: "DSO", ra: 21.558, dec: -0.823, mag: 6.5 },
+            { id: "M3", name: "Ammasso Globulare Cani da Caccia", type: "DSO", ra: 13.703, dec: 28.377, mag: 6.2 },
+            { id: "M8", name: "Nebulosa Laguna", type: "DSO", ra: 18.063, dec: -24.380, mag: 6.0 },
+            { id: "M11", name: "Ammasso Anatra Selvatica", type: "DSO", ra: 18.851, dec: -6.270, mag: 6.3 },
+            { id: "M13", name: "Ammasso Ercole", type: "DSO", ra: 16.695, dec: 36.460, mag: 5.8 },
+            { id: "M15", name: "Ammasso Pegaso", type: "DSO", ra: 21.500, dec: 12.167, mag: 6.2 },
+            { id: "M16", name: "Nebulosa Aquila", type: "DSO", ra: 18.314, dec: -13.800, mag: 6.0 },
+            { id: "M17", name: "Nebulosa Omega", type: "DSO", ra: 18.346, dec: -16.180, mag: 6.0 },
+            { id: "M20", name: "Nebulosa Trifida", type: "DSO", ra: 18.043, dec: -23.030, mag: 6.3 },
+            { id: "M27", name: "Nebulosa Manubrio", type: "DSO", ra: 19.996, dec: 22.721, mag: 7.4 },
+            { id: "M31", name: "Galassia Andromeda", type: "DSO", ra: 0.712, dec: 41.269, mag: 3.4 },
+            { id: "M32", name: "Galassia Satellite M31", type: "DSO", ra: 0.713, dec: 40.865, mag: 8.1 },
+            { id: "M33", name: "Galassia Triangolo", type: "DSO", ra: 1.564, dec: 30.660, mag: 5.7 },
+            { id: "M42", name: "Nebulosa Orione", type: "DSO", ra: 5.588, dec: -5.391, mag: 4.0 },
+            { id: "M44", name: "Ammasso Presepe", type: "DSO", ra: 8.670, dec: 19.670, mag: 3.7 },
+            { id: "M45", name: "Pleiadi", type: "DSO", ra: 3.790, dec: 24.110, mag: 1.6 },
+            { id: "M51", name: "Galassia Vortice", type: "DSO", ra: 13.498, dec: 47.195, mag: 8.4 },
+            { id: "M57", name: "Nebulosa Anello", type: "DSO", ra: 18.893, dec: 33.029, mag: 8.8 },
+            { id: "M81", name: "Galassia Borde", type: "DSO", ra: 9.925, dec: 69.065, mag: 6.9 },
+            { id: "M82", name: "Galassia Sigaro", type: "DSO", ra: 9.929, dec: 69.680, mag: 8.4 },
+            { id: "NGC 869", name: "Doppio Ammasso h Per", type: "DSO", ra: 2.317, dec: 57.133, mag: 5.3 },
+            { id: "NGC 884", name: "Doppio Ammasso chi Per", type: "DSO", ra: 2.373, dec: 57.150, mag: 6.1 },
+            { id: "NGC 7000", name: "Nebulosa Nord America", type: "DSO", ra: 20.980, dec: 44.333, mag: 4.0 },
+            { id: "NGC 6960", name: "Nebulosa Velo Ovest", type: "DSO", ra: 20.758, dec: 30.716, mag: 7.0 },
+            { id: "NGC 6992", name: "Nebulosa Velo Est", type: "DSO", ra: 20.940, dec: 31.716, mag: 7.0 },
+            { id: "Albireo", name: "Beta Cygni (Doppia)", type: "Double", ra: 19.512, dec: 27.960, mag: 3.0 },
+            { id: "Epsilon Lyrae", name: "Doppia Doppia", type: "Double", ra: 18.738, dec: 39.670, mag: 4.7 },
+            { id: "Luna", name: "Luna", type: "Planet", ra: 0.0, dec: 0.0, mag: -12.0 },
+            { id: "Giove", name: "Giove", type: "Planet", ra: 3.200, dec: 16.800, mag: -2.2 },
+            { id: "Saturno", name: "Saturno", type: "Planet", ra: 22.500, dec: -9.200, mag: 0.6 }
+        ];
+
+        let userLat = 45.05;
+        let userLon = 9.69;
+        let phoneAz = 0;
+        let phoneAlt = 35;
+        let fov = 70;
+        let activeCategoryFilter = 'ALL';
+        let selectedTarget = null;
+        let canvas, ctx;
+
+        function toggleMenu() {
+            const m = document.getElementById("advanced-menu");
+            m.style.display = (m.style.display === "block") ? "none" : "block";
+        }
+
+        function zoomIn() { fov = Math.max(15, fov - 10); }
+        function zoomOut() { fov = Math.min(130, fov + 10); }
+
+        function getLST() {
+            const now = new Date();
+            const year = now.getUTCFullYear();
+            const month = now.getUTCMonth() + 1;
+            const day = now.getUTCDate();
+            const hour = now.getUTCHours() + now.getUTCMinutes() / 60.0 + now.getUTCSeconds() / 3600.0;
+
+            let a = Math.floor((14 - month) / 12);
+            let y = year + 4800 - a;
+            let m = month + 12 * a - 3;
+            let jd = day + Math.floor((153 * m + 2) / 5) + 365 * y + Math.floor(y / 4) - Math.floor(y / 100) + Math.floor(y / 400) - 32045 + (hour - 12) / 24.0;
+            let d = jd - 2451545.0;
+            let gmst = (280.46061837 + 360.98564736629 * d) % 360;
+            if (gmst < 0) gmst += 360;
+            return (gmst + userLon + 360) % 360;
+        }
+
+        function updateMoonInfo() {
+            const now = new Date();
+            const synodicMonth = 29.53058867;
+            const knownNewMoon = new Date(2000, 0, 6, 18, 14);
+            const daysSince = (now - knownNewMoon) / (1000 * 60 * 60 * 24);
+            const cyclePhase = (daysSince % synodicMonth) / synodicMonth;
+            const illumination = Math.round((1 - Math.cos(cyclePhase * 2 * Math.PI)) / 2 * 100);
+
+            let phaseName = "";
+            if (cyclePhase < 0.03 || cyclePhase > 0.97) phaseName = "Nuova";
+            else if (cyclePhase < 0.22) phaseName = "Crescente";
+            else if (cyclePhase < 0.28) phaseName = "Primo Quarto";
+            else if (cyclePhase < 0.47) phaseName = "Gibbosa C.";
+            else if (cyclePhase < 0.53) phaseName = "Piena";
+            else if (cyclePhase < 0.72) phaseName = "Gibbosa Cal.";
+            else if (cyclePhase < 0.78) phaseName = "Ultimo Quarto";
+            else phaseName = "Calante";
+
+            const moonObj = rawCatalog.find(o => o.id === "Luna");
+            if (moonObj) {
+                let meanLongitude = (218.316 + 13.176396 * daysSince) % 360;
+                moonObj.ra = ((meanLongitude / 15) % 24 + 24) % 24;
+                moonObj.dec = 5.14 * Math.sin(meanLongitude * Math.PI / 180);
+            }
+
+            const pElem = document.getElementById("moonPhaseName");
+            if (pElem) pElem.textContent = phaseName;
+            const iElem = document.getElementById("moonIllum");
+            if (iElem) iElem.textContent = illumination;
+
+            let riseHour = Math.floor((cyclePhase * 24 + 6) % 24);
+            let setHour = Math.floor((riseHour + 12) % 24);
+            const rElem = document.getElementById("moonRise");
+            if (rElem) rElem.textContent = `${String(riseHour).padStart(2,'0')}:00`;
+            const sElem = document.getElementById("moonSet");
+            if (sElem) sElem.textContent = `${String(setHour).padStart(2,'0')}:00`;
+        }
+
+        function raDecToAltAz(raHours, decDeg, lstDeg) {
+            const raDeg = raHours * 15;
+            const haRad = ((lstDeg - raDeg + 360) % 360) * Math.PI / 180;
+            const latRad = userLat * Math.PI / 180;
+            const decRad = decDeg * Math.PI / 180;
+
+            const sinAlt = Math.sin(decRad) * Math.sin(latRad) + Math.cos(decRad) * Math.cos(latRad) * Math.cos(haRad);
+            const altRad = Math.asin(sinAlt);
+            const altDeg = altRad * 180 / Math.PI;
+
+            let cosAz = (Math.sin(decRad) - Math.sin(latRad) * Math.sin(altRad)) / (Math.cos(latRad) * Math.cos(altRad));
+            cosAz = Math.max(-1, Math.min(1, cosAz));
+            let azRad = Math.acos(cosAz);
+            let azDeg = azRad * 180 / Math.PI;
+            if (Math.sin(haRad) > 0) azDeg = 360 - azDeg;
+
+            return { alt: altDeg, az: azDeg };
+        }
+
+        function drawClippedLine(p1, p2) {
+            const margin = 10;
+            const w = canvas.width;
+            const h = canvas.height;
+
+            if (p1.x < -margin && p2.x < -margin) return;
+            if (p1.x > w + margin && p2.x > w + margin) return;
+            if (p1.y < -margin && p2.y < -margin) return;
+            if (p1.y > h + margin && p2.y > h + margin) return;
+
+            let dx = p2.x - p1.x;
+            let dy = p2.y - p1.y;
+            let dist = Math.sqrt(dx * dx + dy * dy);
+            if (dist > canvas.width * 0.8) return;
+
+            ctx.beginPath();
+            ctx.moveTo(p1.x, p1.y);
+            ctx.lineTo(p2.x, p2.y);
+            ctx.stroke();
+        }
+
+        function drawSky() {
+            if (!canvas || !ctx) return;
+
+            ctx.fillStyle = "#000000";
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            const cx = canvas.width / 2;
+            const cy = canvas.height / 2;
+            const scale = canvas.height / fov;
+            const lst = getLST();
+            const now = Date.now();
+            const isBlinkOn = Math.floor(now / 350) % 2 === 0;
+
+            const pElem = document.getElementById("phoneCoords");
+            if (pElem) pElem.textContent = `${phoneAlt.toFixed(0)}°/${phoneAz.toFixed(0)}°`;
+
+            // 1. TERRENO E ORIZZONTE
+            let horizonY = cy + phoneAlt * scale;
+            if (horizonY < canvas.height + 300) {
+                let grad = ctx.createLinearGradient(0, horizonY, 0, canvas.height);
+                grad.addColorStop(0, "rgba(0, 40, 0, 0.6)");
+                grad.addColorStop(1, "rgba(20, 0, 0, 0.95)");
+                ctx.fillStyle = grad;
+                ctx.fillRect(0, horizonY, canvas.width, canvas.height - horizonY);
+
+                ctx.strokeStyle = "#00ff00";
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.moveTo(0, horizonY);
+                ctx.lineTo(canvas.width, horizonY);
+                ctx.stroke();
+
+                ctx.fillStyle = "#ff3333";
+                ctx.font = "bold 11px monospace";
+                ctx.fillText("[ ORIZZONTE SUOLO 0° ]", 15, horizonY + 15);
+            }
+
+            // 2. Griglia Matrix
+            ctx.strokeStyle = "#003300";
+            ctx.lineWidth = 1;
+            for (let a = 0; a <= 90; a += 15) {
+                ctx.beginPath();
+                ctx.arc(cx, cy, (90 - a) * scale, 0, 2 * Math.PI);
+                ctx.stroke();
+            }
+
+            // 3. Coordinate Stelle
+            const starCoordsCache = {};
+            Object.keys(stars).forEach(sName => {
+                let s = stars[sName];
+                let coords = raDecToAltAz(s.ra, s.dec, lst);
+                let dAz = coords.az - phoneAz;
+                while (dAz > 180) dAz -= 360;
+                while (dAz < -180) dAz += 360;
+
+                let dAlt = coords.alt - phoneAlt;
+
+                let x = cx + dAz * scale;
+                let y = cy - dAlt * scale;
+
+                starCoordsCache[sName] = { 
+                    x: x, y: y, alt: coords.alt, mag: s.mag, 
+                    ox: s.ox || 5, oy: s.oy || 3, isField: s.isField 
+                };
+            });
+
+            // Disegna linee costellazioni
+            ctx.strokeStyle = "#007700";
+            ctx.lineWidth = 1.3;
+            constellationLines.forEach(line => {
+                let s1 = starCoordsCache[line[0]];
+                let s2 = starCoordsCache[line[1]];
+                if (s1 && s2 && s1.alt > -5 && s2.alt > -5) {
+                    drawClippedLine(s1, s2);
+                }
+            });
+
+            // Disegna Punti Stella e Nomi
+            Object.keys(starCoordsCache).forEach(sName => {
+                let s = starCoordsCache[sName];
+                if (s.alt > -5 && s.x >= -50 && s.x <= canvas.width + 50 && s.y >= -50 && s.y <= canvas.height + 50) {
+                    ctx.fillStyle = s.alt >= 0 ? "#00ff00" : "#880000";
+                    ctx.beginPath();
+                    let radius = s.isField ? Math.max(1, 3.0 - s.mag * 0.5) : Math.max(1.8, 4.5 - s.mag * 0.6);
+                    ctx.arc(s.x, s.y, radius, 0, 2 * Math.PI);
+                    ctx.fill();
+
+                    if (!s.isField) {
+                        ctx.font = "9px monospace";
+                        ctx.fillText(sName, s.x + s.ox, s.y + s.oy);
+                    }
+                }
+            });
+
+            // 4. Cataloghi Estesi Messier + NGC
+            rawCatalog.forEach(obj => {
+                if (activeCategoryFilter !== 'ALL' && obj.type !== activeCategoryFilter) return;
+
+                let coords = raDecToAltAz(obj.ra, obj.dec, lst);
+                if (coords.alt > -5) {
+                    let dAz = coords.az - phoneAz;
+                    while (dAz > 180) dAz -= 360;
+                    while (dAz < -180) dAz += 360;
+
+                    let dAlt = coords.alt - phoneAlt;
+                    let x = cx + dAz * scale;
+                    let y = cy - dAlt * scale;
+
+                    if (x < -50 || x > canvas.width + 50 || y < -50 || y > canvas.height + 50) return;
+
+                    const isTarget = selectedTarget && selectedTarget.id === obj.id;
+
+                    if (isTarget && isBlinkOn) {
+                        ctx.strokeStyle = "#ff0000";
+                        ctx.fillStyle = "#ff0000";
+                        ctx.lineWidth = 2;
+                        ctx.strokeRect(x - 12, y - 12, 24, 24);
+                    } else {
+                        ctx.strokeStyle = coords.alt >= 0 ? "#00ff00" : "#660000";
+                        ctx.fillStyle = coords.alt >= 0 ? "#00ff00" : "#660000";
+                        ctx.lineWidth = 1;
+                        if (obj.type === "DSO") {
+                            ctx.strokeRect(x - 5, y - 5, 10, 10);
+                        } else if (obj.type === "Double") {
+                            ctx.beginPath();
+                            ctx.arc(x, y, 4, 0, 2 * Math.PI);
+                            ctx.stroke();
+                        } else {
+                            ctx.beginPath();
+                            ctx.arc(x, y, 5, 0, 2 * Math.PI);
+                            ctx.fill();
+                        }
+                    }
+
+                    let offY = (obj.id === "M32") ? 14 : 3;
+                    ctx.font = "10px monospace";
+                    ctx.fillText(obj.id, x + 7, y + offY);
+                }
+            });
+
+            // 5. Reticolo Puntamento
+            ctx.strokeStyle = "#00ff00";
+            ctx.lineWidth = 1.5;
+            ctx.beginPath();
+            ctx.arc(cx, cy, 25, 0, 2 * Math.PI);
+            ctx.arc(cx, cy, 45, 0, 2 * Math.PI);
+            ctx.moveTo(cx - 60, cy); ctx.lineTo(cx - 10, cy);
+            ctx.moveTo(cx + 10, cy); ctx.lineTo(cx + 60, cy);
+            ctx.moveTo(cx, cy - 60); ctx.lineTo(cx, cy - 10);
+            ctx.moveTo(cx, cy + 10); ctx.lineTo(cx, cy + 60);
+            ctx.stroke();
+
+            // 6. Push-To Target & Freccia Rossa
+            const bingo = document.getElementById("bingo-banner");
+            if (selectedTarget) {
+                let targetCoords = raDecToAltAz(selectedTarget.ra, selectedTarget.dec, lst);
+                let dAlt = targetCoords.alt - phoneAlt;
+                let dAz = targetCoords.az - phoneAz;
+                while (dAz > 180) dAz -= 360;
+                while (dAz < -180) dAz += 360;
+
+                const tElem = document.getElementById("targetCoords");
+                if (tElem) tElem.textContent = `${targetCoords.alt.toFixed(0)}°/${targetCoords.az.toFixed(0)}°`;
+                const dElem = document.getElementById("deltaCoords");
+                if (dElem) dElem.textContent = `${dAlt.toFixed(1)}°/${dAz.toFixed(1)}°`;
+
+                let dist = Math.sqrt(dAlt * dAlt + dAz * dAz);
+                if (dist <= 1.2) {
+                    if (bingo) bingo.style.display = "block";
+                    if (isBlinkOn) {
+                        ctx.strokeStyle = "#ff0000";
+                        ctx.lineWidth = 3;
+                        ctx.beginPath();
+                        ctx.arc(cx, cy, 30, 0, 2 * Math.PI);
+                        ctx.stroke();
+                    }
+                } else {
+                    if (bingo) bingo.style.display = "none";
+                    let angle = Math.atan2((targetCoords.alt - phoneAlt), dAz);
+                    let ax = cx + Math.cos(angle) * 80;
+                    let ay = cy - Math.sin(angle) * 80;
+
+                    if (isBlinkOn) {
+                        ctx.save();
+                        ctx.translate(ax, ay);
+                        ctx.rotate(-angle);
+                        ctx.fillStyle = "#ff0000";
+                        ctx.strokeStyle = "#ffffff";
+                        ctx.lineWidth = 1;
+                        ctx.beginPath();
+                        ctx.moveTo(18, 0); ctx.lineTo(-10, -10); ctx.lineTo(-4, 0); ctx.lineTo(-10, 10);
+                        ctx.closePath();
+                        ctx.fill();
+                        ctx.stroke();
+                        ctx.restore();
+                    }
+                }
+            } else {
+                if (bingo) bingo.style.display = "none";
+            }
+        }
+
+        function animate() {
+            drawSky();
+            requestAnimationFrame(animate);
+        }
+
+        function updateTonightDropdown() {
+            const select = document.getElementById("tonightSelect");
+            if (!select) return;
+            const lst = getLST();
+            let visible = [];
+
+            rawCatalog.forEach((item, idx) => {
+                let coords = raDecToAltAz(item.ra, item.dec, lst);
+                if (coords.alt >= 5) visible.push({ index: idx, obj: item, alt: coords.alt });
+            });
+
+            visible.sort((a, b) => b.alt - a.alt);
+            select.innerHTML = '<option value="">★ OSSERVABILI STASERA...</option>';
+            visible.forEach(v => {
+                let opt = document.createElement("option");
+                opt.value = v.index;
+                opt.textContent = `[Alt: ${v.alt.toFixed(0)}°] ${v.obj.id} - ${v.obj.name}`;
+                select.appendChild(opt);
+            });
+        }
+
+        function onSelectTonight() {
+            const val = document.getElementById("tonightSelect").value;
+            if (val !== "") {
+                selectedTarget = rawCatalog[val];
+                const tSel = document.getElementById("targetSelect");
+                if (tSel) tSel.value = val;
+            }
+        }
+
+        function populateSelect() {
+            const select = document.getElementById("targetSelect");
+            if (!select) return;
+            const query = (document.getElementById("searchInput")?.value || "").toLowerCase();
+            select.innerHTML = '<option value="">-- Catalogo Completo --</option>';
+
+            rawCatalog.forEach((item, idx) => {
+                if (activeCategoryFilter !== 'ALL' && item.type !== activeCategoryFilter) return;
+                if (query && !item.id.toLowerCase().includes(query) && !item.name.toLowerCase().includes(query)) return;
+                let opt = document.createElement("option");
+                opt.value = idx;
+                opt.textContent = `[${item.type}] ${item.id} - ${item.name}`;
+                select.appendChild(opt);
+            });
+        }
+
+        function filterCatalog() { populateSelect(); }
+
+        function setFilter(type, btn) {
+            activeCategoryFilter = type;
+            document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            populateSelect();
+        }
+
+        function onSelectTarget() {
+            const val = document.getElementById("targetSelect").value;
+            selectedTarget = val === "" ? null : rawCatalog[val];
+        }
+
+        function resizeCanvas() {
+            canvas = document.getElementById("skyCanvas");
+            if (!canvas) return;
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+            ctx = canvas.getContext("2d");
+        }
+
+        function requestSensors() {
+            if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
+                DeviceOrientationEvent.requestPermission().then(res => {
+                    if (res === 'granted') window.addEventListener('deviceorientation', handleOrientation);
+                });
+            } else {
+                window.addEventListener('deviceorientation', handleOrientation);
+            }
+        }
+
+        function handleOrientation(e) {
+            if (e.alpha !== null && e.beta !== null) {
+                phoneAz = (360 - e.alpha) % 360;
+                phoneAlt = e.beta;
+            }
+        }
+
+        window.onload = function() {
+            resizeCanvas();
+            window.addEventListener('resize', resizeCanvas);
+
+            let isDragging = false, startX, startY;
+
+            window.addEventListener('touchstart', e => {
+                if (e.target.tagName === 'CANVAS') {
+                    isDragging = true;
+                    startX = e.touches[0].clientX;
+                    startY = e.touches[0].clientY;
+                }
+            });
+
+            window.addEventListener('touchmove', e => {
+                if (!isDragging) return;
+                let dx = e.touches[0].clientX - startX;
+                let dy = e.touches[0].clientY - startY;
+                phoneAz = (phoneAz + dx * 0.2 + 360) % 360;
+                phoneAlt = Math.max(-10, Math.min(90, phoneAlt + dy * 0.2));
+                startX = e.touches[0].clientX;
+                startY = e.touches[0].clientY;
+            });
+
+            window.addEventListener('touchend', () => isDragging = false);
+
+            window.addEventListener('mousedown', e => {
+                if (e.target.tagName === 'CANVAS') {
+                    isDragging = true;
+                    startX = e.clientX;
+                    startY = e.clientY;
+                }
+            });
+
+            window.addEventListener('mousemove', e => {
+                if (!isDragging) return;
+                let dx = e.clientX - startX;
+                let dy = e.clientY - startY;
+                phoneAz = (phoneAz + dx * 0.2 + 360) % 360;
+                phoneAlt = Math.max(-10, Math.min(90, phoneAlt + dy * 0.2));
+                startX = e.clientX;
+                startY = e.clientY;
+            });
+
+            window.addEventListener('mouseup', () => isDragging = false);
+
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(pos => {
+                    userLat = pos.coords.latitude;
+                    userLon = pos.coords.longitude;
+                    updateMoonInfo();
+                    updateTonightDropdown();
+                });
+            }
+
+            updateMoonInfo();
+            populateSelect();
+            updateTonightDropdown();
+            animate();
+        };
+    </script>
+</body>
+</html>
