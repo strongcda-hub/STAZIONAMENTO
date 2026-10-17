@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-  <title>Allineamento Polare App</title>
+  <title>Allineamento Polare & Bolla 3D</title>
   
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -57,6 +57,42 @@
       cursor: pointer;
     }
 
+    /* SELETTORE MODALITÀ TOGGLE */
+    .mode-switch {
+      display: flex;
+      gap: 6px;
+      background: rgba(0,0,0,0.6);
+      padding: 4px;
+      border-radius: 8px;
+      border: 1px solid rgba(255,0,0,0.2);
+    }
+
+    .mode-btn {
+      flex: 1;
+      padding: 10px;
+      border: none;
+      background: transparent;
+      color: #888;
+      font-weight: bold;
+      font-size: 0.9rem;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+
+    .mode-btn.active-bubble {
+      background: rgba(0, 255, 102, 0.2);
+      color: var(--ok);
+      border: 1px solid var(--ok);
+      box-shadow: 0 0 10px rgba(0,255,102,0.3);
+    }
+
+    .mode-btn.active-polar {
+      background: rgba(255, 0, 0, 0.2);
+      color: var(--text);
+      border: 1px solid var(--text);
+      box-shadow: 0 0 10px rgba(255,0,0,0.3);
+    }
+
     .grid {
       display: grid;
       grid-template-columns: 1fr 1fr;
@@ -79,7 +115,7 @@
       margin-top: 2px;
     }
 
-    /* Reticolo Target */
+    /* RETICOLO MULTIFUNZIONE TONDO */
     .polar-scope {
       width: 200px;
       height: 200px;
@@ -89,6 +125,12 @@
       position: relative;
       background: radial-gradient(circle, #050000 0%, #100000 100%);
       box-shadow: inset 0 0 15px rgba(255,0,0,0.2);
+      transition: border-color 0.3s ease, box-shadow 0.3s ease;
+    }
+
+    .polar-scope.bubble-mode {
+      border-color: var(--ok);
+      box-shadow: inset 0 0 15px rgba(0,255,102,0.2);
     }
 
     .cross-h, .cross-v {
@@ -98,27 +140,43 @@
     .cross-h { top: 50%; left: 0; right: 0; height: 1px; }
     .cross-v { left: 50%; top: 0; bottom: 0; width: 1px; }
 
-    /* Bersaglio Target Calcolato */
+    /* Cerchio Target per la Bolla Centrale */
+    .center-target-ring {
+      position: absolute;
+      width: 26px;
+      height: 26px;
+      border: 2px dashed var(--ok);
+      border-radius: 50%;
+      top: 50%; left: 50%;
+      transform: translate(-50%, -50%);
+      box-shadow: 0 0 8px var(--ok);
+      display: none;
+    }
+
     .target-ring {
       position: absolute;
-      width: 20px;
-      height: 20px;
+      width: 22px;
+      height: 22px;
       border: 2px solid #00ffff;
       border-radius: 50%;
       transform: translate(-50%, -50%);
       box-shadow: 0 0 8px #00ffff;
     }
 
-    /* Pallino Indicatore Telefonino */
     .dot-indicator {
-      width: 14px;
-      height: 14px;
+      width: 16px;
+      height: 16px;
       background: #ffee55;
       border-radius: 50%;
       position: absolute;
       transform: translate(-50%, -50%);
-      box-shadow: 0 0 10px #ffee55;
-      transition: left 0.1s ease, top 0.1s ease;
+      box-shadow: 0 0 12px #ffee55;
+      transition: left 0.1s ease, top 0.1s ease, background 0.3s ease;
+    }
+
+    .dot-indicator.bubble-active {
+      background: var(--ok);
+      box-shadow: 0 0 14px var(--ok);
     }
 
     .status-banner {
@@ -140,6 +198,27 @@
       box-shadow: 0 0 15px rgba(0,255,102,0.4);
     }
 
+    .arrow-guide-box {
+      background: rgba(0, 0, 0, 0.6);
+      border: 1px solid var(--accent);
+      border-radius: 8px;
+      padding: 10px;
+      margin-top: 10px;
+      text-align: center;
+    }
+
+    .arrow-icon {
+      font-size: 2.2rem;
+      line-height: 1;
+      margin-bottom: 4px;
+    }
+
+    .arrow-text {
+      font-size: 1.05rem;
+      font-weight: bold;
+      color: #fff;
+    }
+
     .slider-input {
       width: 100%;
       margin: 8px 0;
@@ -151,38 +230,35 @@
 
 <div class="container">
   <div style="display:flex; justify-content:space-between; align-items:center;">
-    <h3 style="margin:0;">🧭 MIRINO STAZIONAMENTO POLARE</h3>
+    <h3 style="margin:0;">🧭 STAZIONAMENTO POLARE</h3>
   </div>
 
   <div class="card">
-    <button class="btn" onclick="initHardware()">📡 ABILITA SENSORI & GPS</button>
-    <div id="status" style="text-align:center; font-size:0.8rem; margin-top:6px; opacity:0.8;">Tocca per sincronizzare l'hardware</div>
+    <button class="btn" onclick="initHardware()">📡 ABILITA BUSSOLA & GPS</button>
+    <div id="status" style="text-align:center; font-size:0.8rem; margin-top:6px; opacity:0.8;">Tocca per attivare Bussola, Livella e GPS</div>
   </div>
 
-  <div class="card">
-    <b>📍 Dati Target Polare</b>
-    <div class="grid">
-      <div class="box">Latitudine Target<div class="val" id="lat-display">45.05° N</div></div>
-      <div class="box">Ora Siderale (LST)<div class="val" id="lst-val">--:--</div></div>
-      <div class="box">Angolo Orario<div class="val" id="ha-val">--h --m</div></div>
-      <div class="box">Posizione Reticolo<div class="val" id="clock-val">Ore --:00</div></div>
+  <!-- TASTI SELETTORE MODALITÀ -->
+  <div class="card" style="padding:8px;">
+    <div class="mode-switch">
+      <button class="mode-btn" id="btn-mode-bubble" onclick="setAppMode('bubble')">🟢 MESSA IN BOLLA</button>
+      <button class="mode-btn active-polar" id="btn-mode-polar" onclick="setAppMode('polar')">🎯 STAZIONAMENTO POLARE</button>
     </div>
   </div>
 
-  <!-- VISUALIZZATORE MIRINO DINAMICO -->
+  <!-- RETICOLO UNICO TONDO MULTIFUNZIONE -->
   <div class="card" style="text-align:center;">
-    <b>🎯 Indicatore di Puntamento</b>
-    <div style="font-size:0.8rem; opacity:0.8; margin-top:4px;">
+    <b id="reticle-title">🎯 Mirino Polare Dinamico</b>
+    <div id="reticle-sub" style="font-size:0.8rem; opacity:0.8; margin-top:4px;">
       ⭕ Cerchio Azzurro = Posizione Teorica Polare<br>
-      🟡 Pallino Giallo = Posizione Telefono
+      🟡 Pallino Giallo = Posizione Reale Sensori
     </div>
 
-    <div class="polar-scope">
+    <div class="polar-scope" id="main-reticle">
       <div class="cross-h"></div>
       <div class="cross-v"></div>
-      <!-- Target teorico -->
+      <div class="center-target-ring" id="center-bubble-ring"></div>
       <div class="target-ring" id="target-ring" style="top:50%; left:50%;"></div>
-      <!-- Indicatore reale sensore -->
       <div class="dot-indicator" id="p-dot" style="top:50%; left:50%;"></div>
     </div>
 
@@ -190,35 +266,93 @@
   </div>
 
   <div class="card">
+    <b>📍 Dati Posizione & Cielo</b>
+    <div class="grid">
+      <div class="box">Latitudine GPS<div class="val" id="lat-display">45.05° N</div></div>
+      <div class="box">Ora Siderale (LST)<div class="val" id="lst-val">--:--</div></div>
+      <div class="box">Angolo Orario<div class="val" id="ha-val">--h --m</div></div>
+      <div class="box">Posizione Reticolo<div class="val" id="clock-val">Ore --:00</div></div>
+    </div>
+  </div>
+
+  <div class="card">
     <div style="display:flex; justify-content:space-between; align-items:center;">
-      <b>📐 Inclinazione R.A. (Errore Altezza)</b>
+      <b>📐 Inclinazione R.A. (Altezza Gravitazionale)</b>
       <span id="pitch-val" style="font-weight:bold;">0.0°</span>
     </div>
     <input type="range" class="slider-input" id="pitch-slider" min="0" max="90" step="0.1" value="45" oninput="manualPitch(this.value)">
   </div>
 
-  <div class="card">
+  <!-- REGOLAZIONE VITI AZIMUT -->
+  <div class="card" id="azimuth-card">
     <div style="display:flex; justify-content:space-between; align-items:center;">
-      <b>🔄 Azimut (Errore Nord)</b>
+      <b>🧩 Azimut Reale (Bussola Magnetica)</b>
       <span id="yaw-val" style="font-weight:bold;">0.0°</span>
     </div>
-    <button class="btn" style="padding:8px; margin-bottom:8px;" onclick="resetYaw()">🎯 CALIBRA AZIMUT A NORD</button>
-    <input type="range" class="slider-input" id="yaw-slider" min="-30" max="30" step="0.2" value="0" oninput="manualYaw(this.value)">
+
+    <div class="arrow-guide-box" id="arrow-box">
+      <div class="arrow-icon" id="arrow-icon">🎯</div>
+      <div class="arrow-text" id="arrow-instruction">In attesa dei sensori...</div>
+    </div>
+
+    <div class="grid" style="margin-top:10px;">
+      <div class="box">Nord Bussola<div class="val" id="heading-val">0.0°</div></div>
+      <div class="box">Offset Azimut<div class="val" id="az-offset-val">0.0°</div></div>
+    </div>
+    <input type="range" class="slider-input" id="yaw-slider" min="-30" max="30" step="0.1" value="0" oninput="manualYaw(this.value)">
   </div>
 </div>
 
 <script>
 let lat = 45.05, lon = 9.69;
-let lastTimestamp = 0;
 let currentYaw = 0;
 let currentPitch = 45.0;
+let currentRoll = 0;
 let targetX = 100, targetY = 100;
+let compassHeading = 0;
 let sensorMode = false;
+let appMode = 'polar'; // 'polar' oppure 'bubble'
 
 window.addEventListener('DOMContentLoaded', () => {
   updateTargetPolaris();
   setInterval(updateTargetPolaris, 1000);
 });
+
+function setAppMode(mode) {
+  appMode = mode;
+  const btnBubble = document.getElementById('btn-mode-bubble');
+  const btnPolar = document.getElementById('btn-mode-polar');
+  const mainReticle = document.getElementById('main-reticle');
+  const targetRing = document.getElementById('target-ring');
+  const centerBubbleRing = document.getElementById('center-bubble-ring');
+  const pDot = document.getElementById('p-dot');
+  const title = document.getElementById('reticle-title');
+  const sub = document.getElementById('reticle-sub');
+
+  if (mode === 'bubble') {
+    btnBubble.className = "mode-btn active-bubble";
+    btnPolar.className = "mode-btn";
+    mainReticle.className = "polar-scope bubble-mode";
+    targetRing.style.display = "none";
+    centerBubbleRing.style.display = "block";
+    pDot.className = "dot-indicator bubble-active";
+    title.innerText = "🟢 Livella 3D Treppiede";
+    title.style.color = "var(--ok)";
+    sub.innerHTML = "Porta il pallino verde al centro del reticolo<br>regolando le gambe del treppiede";
+  } else {
+    btnBubble.className = "mode-btn";
+    btnPolar.className = "mode-btn active-polar";
+    mainReticle.className = "polar-scope";
+    targetRing.style.display = "block";
+    centerBubbleRing.style.display = "none";
+    pDot.className = "dot-indicator";
+    title.innerText = "🎯 Mirino Polare Dinamico";
+    title.style.color = "var(--text)";
+    sub.innerHTML = "⭕ Cerchio Azzurro = Posizione Teorica Polare<br>🟡 Pallino Giallo = Posizione Reale Sensori";
+  }
+
+  updateIndicatorPosition();
+}
 
 function initHardware() {
   const status = document.getElementById('status');
@@ -232,43 +366,57 @@ function initHardware() {
     });
   }
 
-  if (typeof DeviceMotionEvent !== 'undefined' && typeof DeviceMotionEvent.requestPermission === 'function') {
-    DeviceMotionEvent.requestPermission().then(res => {
+  if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
+    DeviceOrientationEvent.requestPermission().then(res => {
       if (res === 'granted') {
-        window.addEventListener('devicemotion', handleMotion);
+        window.addEventListener('deviceorientation', handleOrientation, true);
+        window.addEventListener('devicemotion', handleMotion, true);
         sensorMode = true;
-        status.innerText = "✅ Sensori Attivi!";
+        status.innerText = "✅ Bussola, Livella & GPS Attivi!";
       }
     });
   } else {
-    window.addEventListener('devicemotion', handleMotion);
+    window.addEventListener('deviceorientation', handleOrientation, true);
+    window.addEventListener('devicemotion', handleMotion, true);
     sensorMode = true;
-    status.innerText = "✅ Sensori Attivi!";
+    status.innerText = "✅ Bussola, Livella & GPS Attivi!";
   }
+}
+
+function handleOrientation(event) {
+  if (!sensorMode) return;
+
+  let heading = 0;
+  if (event.webkitCompassHeading) {
+    heading = event.webkitCompassHeading;
+  } else if (event.alpha !== null) {
+    heading = 360 - event.alpha;
+  }
+
+  compassHeading = heading % 360;
+  document.getElementById('heading-val').innerText = compassHeading.toFixed(1) + '°';
+
+  let azErr = compassHeading;
+  if (azErr > 180) azErr -= 360;
+  
+  currentYaw = azErr;
+  document.getElementById('yaw-slider').value = currentYaw.toFixed(1);
+  document.getElementById('yaw-val').innerText = (currentYaw > 0 ? '+' : '') + currentYaw.toFixed(1) + '°';
+  document.getElementById('az-offset-val').innerText = (currentYaw > 0 ? '+' : '') + currentYaw.toFixed(1) + '°';
+
+  updateIndicatorPosition();
 }
 
 function handleMotion(event) {
   if (!sensorMode) return;
 
-  // Inclinazione Altezza (Pitch)
   const acc = event.accelerationIncludingGravity;
-  if (acc && acc.z !== null && acc.y !== null) {
+  if (acc && acc.x !== null && acc.y !== null && acc.z !== null) {
+    currentRoll = acc.x * 6; // Inclinazione orizzontale
     currentPitch = Math.abs(Math.atan2(acc.y, acc.z) * (180 / Math.PI));
+
     document.getElementById('pitch-slider').value = currentPitch.toFixed(1);
     document.getElementById('pitch-val').innerText = currentPitch.toFixed(1) + '°';
-  }
-
-  // Rotazione Azimut (Yaw)
-  const gyro = event.rotationRate;
-  if (gyro && gyro.alpha !== null) {
-    const now = Date.now();
-    if (lastTimestamp > 0) {
-      const dt = (now - lastTimestamp) / 1000;
-      currentYaw += gyro.alpha * dt;
-      document.getElementById('yaw-slider').value = currentYaw.toFixed(1);
-      document.getElementById('yaw-val').innerText = (currentYaw > 0 ? '+' : '') + currentYaw.toFixed(1) + '°';
-    }
-    lastTimestamp = now;
   }
 
   updateIndicatorPosition();
@@ -283,13 +431,8 @@ function manualPitch(val) {
 function manualYaw(val) {
   currentYaw = parseFloat(val);
   document.getElementById('yaw-val').innerText = (currentYaw > 0 ? '+' : '') + currentYaw.toFixed(1) + '°';
+  document.getElementById('az-offset-val').innerText = (currentYaw > 0 ? '+' : '') + currentYaw.toFixed(1) + '°';
   updateIndicatorPosition();
-}
-
-function resetYaw() {
-  currentYaw = 0;
-  document.getElementById('yaw-slider').value = 0;
-  manualYaw(0);
 }
 
 function updateTargetPolaris() {
@@ -308,7 +451,6 @@ function updateTargetPolaris() {
   document.getElementById('lst-val').innerText = Math.floor(LST).toString().padStart(2, '0') + ':' + String(Math.floor((LST%1)*60)).padStart(2,'0');
   document.getElementById('ha-val').innerText = Math.floor(HA) + 'h ' + Math.floor((HA%1)*60) + 'm';
 
-  // Posizione del target azzurro
   const rad = (HA / 24) * 2 * Math.PI - (Math.PI / 2);
   targetX = 100 + 75 * Math.cos(rad);
   targetY = 100 + 75 * Math.sin(rad);
@@ -325,32 +467,77 @@ function updateTargetPolaris() {
 }
 
 function updateIndicatorPosition() {
-  // Calcolo scostamento tra la posizione del telefono e il target teorico
-  let pitchErr = (currentPitch - lat); // Errore vertical
-  let yawErr = currentYaw;             // Errore orizzontale
-
-  // Il pallino si sposta in base agli errori fisici letti dai sensori
-  let indX = targetX - (yawErr * 6);
-  let indY = targetY - (pitchErr * 6);
-
-  // Limiti all'interno della vista reticolo
-  indX = Math.max(10, Math.min(190, indX));
-  indY = Math.max(10, Math.min(190, indY));
-
   const dot = document.getElementById('p-dot');
-  dot.style.left = indX.toFixed(1) + 'px';
-  dot.style.top = indY.toFixed(1) + 'px';
-
-  // Verifica centratura (Tolleranza OK)
-  const dist = Math.sqrt(Math.pow(indX - targetX, 2) + Math.pow(indY - targetY, 2));
   const banner = document.getElementById('align-banner');
+  const arrowIcon = document.getElementById('arrow-icon');
+  const arrowText = document.getElementById('arrow-instruction');
 
-  if (dist < 8) {
-    banner.innerText = "🎯 OK STAZIONAMENTO PERFETTO!";
-    banner.className = "status-banner ok";
+  if (appMode === 'bubble') {
+    // MODALITÀ BOLLA 3D (Target Centro Reticolo: 100, 100)
+    let bX = 100 + currentRoll;
+    let bY = 100 - ((currentPitch - lat) * 5);
+
+    bX = Math.max(15, Math.min(185, bX));
+    bY = Math.max(15, Math.min(185, bY));
+
+    dot.style.left = bX.toFixed(1) + 'px';
+    dot.style.top = bY.toFixed(1) + 'px';
+
+    const distFromCenter = Math.sqrt(Math.pow(bX - 100, 2) + Math.pow(bY - 100, 2));
+
+    if (distFromCenter < 12) {
+      banner.innerText = "🟢 TREPPIEDE PERFETTAMENTE IN BOLLA!";
+      banner.className = "status-banner ok";
+    } else {
+      banner.innerText = "⚠️ REGOLA LE GAMBE DEL TREPPIEDE";
+      banner.className = "status-banner";
+      banner.style.color = "var(--ok)";
+      banner.style.borderColor = "var(--ok)";
+    }
+
+    arrowIcon.innerText = "📐";
+    arrowText.innerText = "MODALITÀ LIVELLA ATTIVA";
+    arrowText.style.color = "var(--ok)";
+
   } else {
-    banner.innerText = "❌ CORREGGI AZIMUT / ALTEZZA";
-    banner.className = "status-banner";
+    // MODALITÀ STAZIONAMENTO POLARE
+    let pitchErr = (currentPitch - lat);
+    let yawErr = currentYaw;
+
+    let indX = targetX - (yawErr * 5);
+    let indY = targetY - (pitchErr * 5);
+
+    indX = Math.max(15, Math.min(185, indX));
+    indY = Math.max(15, Math.min(185, indY));
+
+    dot.style.left = indX.toFixed(1) + 'px';
+    dot.style.top = indY.toFixed(1) + 'px';
+
+    if (Math.abs(yawErr) < 0.5) {
+      arrowIcon.innerText = "🎯";
+      arrowText.innerText = "AZIMUT CENTRATO!";
+      arrowText.style.color = "#00ff66";
+    } else if (yawErr > 0) {
+      arrowIcon.innerText = "⬅️";
+      arrowText.innerText = "ALLENTA DX ➔ AVVITA SX";
+      arrowText.style.color = "#ffee55";
+    } else {
+      arrowIcon.innerText = "➡️";
+      arrowText.innerText = "ALLENTA SX ➔ AVVITA DX";
+      arrowText.style.color = "#ffee55";
+    }
+
+    const dist = Math.sqrt(Math.pow(indX - targetX, 2) + Math.pow(indY - targetY, 2));
+
+    if (dist < 8) {
+      banner.innerText = "🎯 OK STAZIONAMENTO PERFETTO!";
+      banner.className = "status-banner ok";
+    } else {
+      banner.innerText = "❌ CORREGGI AZIMUT / ALTEZZA";
+      banner.className = "status-banner";
+      banner.style.color = "var(--text)";
+      banner.style.borderColor = "var(--text)";
+    }
   }
 }
 </script>
