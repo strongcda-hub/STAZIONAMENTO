@@ -57,7 +57,6 @@
       cursor: pointer;
     }
 
-    /* SELETTORE MODALITÀ TOGGLE */
     .mode-switch {
       display: flex;
       gap: 6px;
@@ -115,7 +114,6 @@
       margin-top: 2px;
     }
 
-    /* RETICOLO MULTIFUNZIONE TONDO */
     .polar-scope {
       width: 200px;
       height: 200px;
@@ -140,11 +138,10 @@
     .cross-h { top: 50%; left: 0; right: 0; height: 1px; }
     .cross-v { left: 50%; top: 0; bottom: 0; width: 1px; }
 
-    /* Cerchio Target per la Bolla Centrale */
     .center-target-ring {
       position: absolute;
-      width: 26px;
-      height: 26px;
+      width: 28px;
+      height: 28px;
       border: 2px dashed var(--ok);
       border-radius: 50%;
       top: 50%; left: 50%;
@@ -238,7 +235,6 @@
     <div id="status" style="text-align:center; font-size:0.8rem; margin-top:6px; opacity:0.8;">Tocca per attivare Bussola, Livella e GPS</div>
   </div>
 
-  <!-- TASTI SELETTORE MODALITÀ -->
   <div class="card" style="padding:8px;">
     <div class="mode-switch">
       <button class="mode-btn" id="btn-mode-bubble" onclick="setAppMode('bubble')">🟢 MESSA IN BOLLA</button>
@@ -246,7 +242,6 @@
     </div>
   </div>
 
-  <!-- RETICOLO UNICO TONDO MULTIFUNZIONE -->
   <div class="card" style="text-align:center;">
     <b id="reticle-title">🎯 Mirino Polare Dinamico</b>
     <div id="reticle-sub" style="font-size:0.8rem; opacity:0.8; margin-top:4px;">
@@ -283,7 +278,6 @@
     <input type="range" class="slider-input" id="pitch-slider" min="0" max="90" step="0.1" value="45" oninput="manualPitch(this.value)">
   </div>
 
-  <!-- REGOLAZIONE VITI AZIMUT -->
   <div class="card" id="azimuth-card">
     <div style="display:flex; justify-content:space-between; align-items:center;">
       <b>🧩 Azimut Reale (Bussola Magnetica)</b>
@@ -311,7 +305,7 @@ let currentRoll = 0;
 let targetX = 100, targetY = 100;
 let compassHeading = 0;
 let sensorMode = false;
-let appMode = 'polar'; // 'polar' oppure 'bubble'
+let appMode = 'polar';
 
 window.addEventListener('DOMContentLoaded', () => {
   updateTargetPolaris();
@@ -412,7 +406,7 @@ function handleMotion(event) {
 
   const acc = event.accelerationIncludingGravity;
   if (acc && acc.x !== null && acc.y !== null && acc.z !== null) {
-    currentRoll = acc.x * 6; // Inclinazione orizzontale
+    currentRoll = acc.x * 6; // Tilt orizzontale
     currentPitch = Math.abs(Math.atan2(acc.y, acc.z) * (180 / Math.PI));
 
     document.getElementById('pitch-slider').value = currentPitch.toFixed(1);
@@ -473,9 +467,9 @@ function updateIndicatorPosition() {
   const arrowText = document.getElementById('arrow-instruction');
 
   if (appMode === 'bubble') {
-    // MODALITÀ BOLLA 3D (Target Centro Reticolo: 100, 100)
+    // CORREZIONE FONDAMENTALE: Si calcola l'offset verticale rispetto alla Latitudine GPS (es. 45°)
     let bX = 100 + currentRoll;
-    let bY = 100 - ((currentPitch - lat) * 5);
+    let bY = 100 - ((currentPitch - lat) * 6);
 
     bX = Math.max(15, Math.min(185, bX));
     bY = Math.max(15, Math.min(185, bY));
