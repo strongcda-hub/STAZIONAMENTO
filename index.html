@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-  <title>Allineamento Polare & Bolla 3D</title>
+  <title>Allineamento Polare & Livella Treppiede</title>
   
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -301,7 +301,7 @@
 let lat = 45.05, lon = 9.69;
 let currentYaw = 0;
 let currentPitch = 45.0;
-let currentRoll = 0;
+let rawAccX = 0, rawAccY = 0;
 let targetX = 100, targetY = 100;
 let compassHeading = 0;
 let sensorMode = false;
@@ -330,9 +330,9 @@ function setAppMode(mode) {
     targetRing.style.display = "none";
     centerBubbleRing.style.display = "block";
     pDot.className = "dot-indicator bubble-active";
-    title.innerText = "🟢 Livella 3D Treppiede";
+    title.innerText = "🟢 Livella 3D Treppiede (Telefono in Piano)";
     title.style.color = "var(--ok)";
-    sub.innerHTML = "Porta il pallino verde al centro del reticolo<br>regolando le gambe del treppiede";
+    sub.innerHTML = "Appoggia il telefono IN PIANO sul treppiede e<br>regola le gambe fino a centrare il pallino verde";
   } else {
     btnBubble.className = "mode-btn";
     btnPolar.className = "mode-btn active-polar";
@@ -406,9 +406,11 @@ function handleMotion(event) {
 
   const acc = event.accelerationIncludingGravity;
   if (acc && acc.x !== null && acc.y !== null && acc.z !== null) {
-    currentRoll = acc.x * 6; // Tilt orizzontale
-    currentPitch = Math.abs(Math.atan2(acc.y, acc.z) * (180 / Math.PI));
+    // Salviamo le accelerazioni per la bolla pura a 0°
+    rawAccX = acc.x;
+    rawAccY = acc.y;
 
+    currentPitch = Math.abs(Math.atan2(acc.y, acc.z) * (180 / Math.PI));
     document.getElementById('pitch-slider').value = currentPitch.toFixed(1);
     document.getElementById('pitch-val').innerText = currentPitch.toFixed(1) + '°';
   }
@@ -467,9 +469,9 @@ function updateIndicatorPosition() {
   const arrowText = document.getElementById('arrow-instruction');
 
   if (appMode === 'bubble') {
-    // CORREZIONE FONDAMENTALE: Si calcola l'offset verticale rispetto alla Latitudine GPS (es. 45°)
-    let bX = 100 + currentRoll;
-    let bY = 100 - ((currentPitch - lat) * 6);
+    // BOLLA PURA CON TELEFONO IN PIANO SUL PIATTO DEL TREPPIEDE (0°)
+    let bX = 100 + (rawAccX * 8);
+    let bY = 100 - (rawAccY * 8);
 
     bX = Math.max(15, Math.min(185, bX));
     bY = Math.max(15, Math.min(185, bY));
@@ -490,7 +492,7 @@ function updateIndicatorPosition() {
     }
 
     arrowIcon.innerText = "📐";
-    arrowText.innerText = "MODALITÀ LIVELLA ATTIVA";
+    arrowText.innerText = "MODALITÀ LIVELLA ATTIVA (TELEFONO IN PIANO)";
     arrowText.style.color = "var(--ok)";
 
   } else {
