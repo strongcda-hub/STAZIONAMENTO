@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>AstroDSC Push-To Pro - GPS Sync</title>
+    <title>AstroDSC Push-To Pro - Corrected Geometry</title>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; touch-action: none; }
         html, body {
@@ -344,7 +344,7 @@
         }
 
         function drawClippedLine(p1, p2) {
-            const margin = 10;
+            const margin = 15;
             const w = canvas.width;
             const h = canvas.height;
 
@@ -356,7 +356,7 @@
             let dx = p2.x - p1.x;
             let dy = p2.y - p1.y;
             let dist = Math.sqrt(dx * dx + dy * dy);
-            if (dist > canvas.width * 0.8) return;
+            if (dist > canvas.width * 0.85) return;
 
             ctx.beginPath();
             ctx.moveTo(p1.x, p1.y);
@@ -372,7 +372,11 @@
 
             const cx = canvas.width / 2;
             const cy = canvas.height / 2;
-            const scale = canvas.height / fov;
+            
+            // CORRETTO RAPPORTO DI ASPETTO ISOTROPICO (evita stretch verticale o orizzontale)
+            const minDim = Math.min(canvas.width, canvas.height);
+            const scale = minDim / fov;
+
             const lst = getLST();
             const now = Date.now();
             const isBlinkOn = Math.floor(now / 350) % 2 === 0;
@@ -398,7 +402,7 @@
                 ctx.fillText("[ ORIZZONTE SUOLO 0° ]", 15, horizonY + 15);
             }
 
-            // 2. Griglia Matrix
+            // 2. Griglia Circolare
             ctx.strokeStyle = "#003300";
             ctx.lineWidth = 1;
             for (let a = 0; a <= 90; a += 15) {
@@ -407,16 +411,19 @@
                 ctx.stroke();
             }
 
-            // 3. Coordinate Stelle
+            // 3. Proiezione Corretta delle Stelle
             const starCoordsCache = {};
             Object.keys(stars).forEach(sName => {
                 let s = stars[sName];
                 let coords = raDecToAltAz(s.ra, s.dec, lst);
+                
                 let dAz = coords.az - phoneAz;
                 while (dAz > 180) dAz -= 360;
                 while (dAz < -180) dAz += 360;
 
                 let dAlt = coords.alt - phoneAlt;
+
+                // Mappa isometrica corretta basata su minDim per evitare deformazioni d'asse
                 let x = cx + dAz * scale;
                 let y = cy - dAlt * scale;
 
@@ -500,7 +507,7 @@
                 }
             });
 
-            // 5. Reticolo Puntamento
+            // 5. Reticolo Centrale di Puntamento HUD
             ctx.strokeStyle = "#00ff00";
             ctx.lineWidth = 1.5;
             ctx.beginPath();
@@ -512,7 +519,7 @@
             ctx.moveTo(cx, cy + 10); ctx.lineTo(cx, cy + 60);
             ctx.stroke();
 
-            // 6. Push-To Target & Freccia Rossa
+            // 6. Push-To Target & Freccia Rossa Indicatrice
             const bingo = document.getElementById("bingo-banner");
             if (selectedTarget) {
                 let targetCoords = raDecToAltAz(selectedTarget.ra, selectedTarget.dec, lst);
@@ -645,12 +652,9 @@
             }
         }
 
-        // GESTIONE ORIENTAMENTO CON BUSSOLA ABSOLUTE O STANDARD
         function handleOrientation(e) {
             if (e.alpha !== null && e.beta !== null) {
-                // Sfrutta absoluteorientation o alpha standard corretto per il nord magnetico/geografico
                 let az = e.webkitCompassHeading || e.alpha;
-                // Se viene usata la bussola standard Android (alpha antiorario), la invertiamo correttamente
                 if (!e.webkitCompassHeading) {
                     az = (360 - e.alpha) % 360;
                 }
@@ -690,7 +694,6 @@
                     isDragging = true;
                     startX = e.clientX;
                     startY = e.clientY;
-                    document.getElementById("gpsStatus").textContent = "GPS ATTIVO";
                 }
             });
 
@@ -706,7 +709,6 @@
 
             window.addEventListener('mouseup', () => isDragging = false);
 
-            // ACQUISIZIONE GPS OBBLIGATORIA E PRECISA
             if (navigator.geolocation) {
                 navigator.geolocation.watchPosition(pos => {
                     userLat = pos.coords.latitude;
@@ -715,7 +717,7 @@
                     updateMoonInfo();
                     updateTonightDropdown();
                 }, err => {
-                    document.getElementById("gpsStatus").textContent = "ERRORE GPS (DEFAULT)";
+                    document.getElementById("gpsStatus").textContent = "GPS ERRORE";
                 }, { enableHighAccuracy: true, maximumAge: 0, timeout: 10000 });
             } else {
                 document.getElementById("gpsStatus").textContent = "NON SUPPORTATO";
