@@ -16,7 +16,7 @@
 
         #skyCanvas {
             position: absolute; top: 0; left: 0;
-            width: 100vw; height: 100vh;
+            width: 100%; height: 100%;
             background-color: #000000 !important;
             z-index: 1;
             display: block;
@@ -28,7 +28,7 @@
             z-index: 10;
             background: rgba(15, 0, 0, 0.92);
             border: 1px solid #cc0000; border-radius: 6px;
-            padding: 6px 10px; font-size: 10px;
+            padding: 6px 10px; font-size: 11px;
             display: flex; justify-content: space-between; align-items: center;
             color: #aa2222;
             box-shadow: 0 0 10px rgba(204, 0, 0, 0.3);
@@ -36,23 +36,23 @@
 
         .hud-val { color: #ff3333; font-weight: bold; }
 
-        /* Barra di Navigazione Inferiore Stile Moderno */
+        /* Barra di Navigazione Inferiore Più Grande */
         #hud-bottom-bar {
-            position: absolute; bottom: 12px; left: 50%;
+            position: absolute; bottom: 16px; left: 50%;
             transform: translateX(-50%);
             z-index: 20;
             background: rgba(18, 0, 0, 0.95);
-            border: 1px solid #880000; border-radius: 16px;
-            padding: 6px 10px;
-            display: flex; gap: 8px; align-items: center;
+            border: 1px solid #880000; border-radius: 18px;
+            padding: 8px 12px;
+            display: flex; gap: 10px; align-items: center;
             box-shadow: 0 4px 20px rgba(204, 0, 0, 0.4);
         }
 
         .nav-btn {
-            width: 44px; height: 44px; border-radius: 12px;
+            width: 56px; height: 56px; border-radius: 14px;
             background: linear-gradient(135deg, #250000, #100000);
             border: 1px solid #990000;
-            color: #ff4444; font-size: 18px;
+            color: #ff4444; font-size: 22px;
             display: flex; flex-direction: column;
             align-items: center; justify-content: center;
             cursor: pointer; transition: all 0.2s ease;
@@ -66,33 +66,33 @@
             transform: scale(0.95);
         }
 
-        .nav-icon { font-size: 16px; line-height: 1; }
-        .nav-label { font-size: 7px; margin-top: 2px; text-transform: uppercase; letter-spacing: 0.5px; }
+        .nav-icon { font-size: 20px; line-height: 1; }
+        .nav-label { font-size: 8px; margin-top: 3px; text-transform: uppercase; letter-spacing: 0.5px; }
 
-        /* Sottomenu con Effetto Slide da Destra */
+        /* Sottomenu a Tutto Schermo */
         .slide-panel {
-            position: absolute; top: 60px; right: -110%; width: 85%; max-width: 340px;
-            height: calc(100vh - 140px);
+            position: absolute; top: 10px; right: -110%; width: 96vw; max-width: 440px;
+            height: calc(100vh - 20px);
             background: rgba(12, 0, 0, 0.98);
-            border: 1px solid #cc0000; border-radius: 12px;
-            z-index: 30; padding: 15px;
-            box-shadow: -5px 0 25px rgba(204, 0, 0, 0.5);
+            border: 1px solid #cc0000; border-radius: 14px;
+            z-index: 30; padding: 18px;
+            box-shadow: -5px 0 25px rgba(204, 0, 0, 0.6);
             transition: right 0.35s cubic-bezier(0.1, 0.9, 0.2, 1);
-            display: flex; flex-direction: column; gap: 10px;
+            display: flex; flex-direction: column; gap: 14px;
             overflow-y: auto;
         }
 
-        .slide-panel.open { right: 15px; }
+        .slide-panel.open { right: 2vw; }
 
         .panel-header {
             display: flex; justify-content: space-between; align-items: center;
-            border-bottom: 1px solid #660000; padding-bottom: 8px;
-            font-size: 12px; font-weight: bold; color: #ff4444;
+            border-bottom: 1px solid #660000; padding-bottom: 10px;
+            font-size: 14px; font-weight: bold; color: #ff4444;
         }
 
         .back-btn {
             background: #350000; color: #ff6666; border: 1px solid #ff0000;
-            padding: 4px 10px; border-radius: 6px; font-size: 9px; cursor: pointer;
+            padding: 6px 12px; border-radius: 8px; font-size: 10px; cursor: pointer;
             font-family: inherit; font-weight: bold;
         }
         .back-btn:active { background: #660000; color: #fff; }
@@ -101,27 +101,27 @@
             background: #150000 !important;
             color: #ff3333 !important;
             border: 1px solid #990000 !important;
-            padding: 8px;
-            border-radius: 6px;
-            font-family: inherit; font-size: 11px;
+            padding: 10px;
+            border-radius: 8px;
+            font-family: inherit; font-size: 12px;
             width: 100%; outline: none;
         }
 
         .info-panel {
-            background: #140000; border: 1px solid #880000; padding: 8px;
-            border-radius: 6px; color: #dd3333; font-size: 10px; line-height: 1.4;
+            background: #140000; border: 1px solid #880000; padding: 12px;
+            border-radius: 8px; color: #dd3333; font-size: 11px; line-height: 1.5;
         }
 
-        .filter-group { display: flex; gap: 4px; margin-top: 6px; }
-        .filter-tab { flex: 1; padding: 5px; font-size: 9px; background: #1a0000; border: 1px solid #880000; color: #aa3333; text-align: center; cursor: pointer; border-radius: 4px;}
+        .filter-group { display: flex; gap: 6px; margin-top: 8px; }
+        .filter-tab { flex: 1; padding: 8px; font-size: 10px; background: #1a0000; border: 1px solid #880000; color: #aa3333; text-align: center; cursor: pointer; border-radius: 6px;}
         .filter-tab.active { background: #550000; color: #ffffff; border-color: #ff0000; }
 
         #bingo-banner {
-            position: absolute; top: 55px; left: 50%;
+            position: absolute; top: 60px; left: 50%;
             transform: translateX(-50%); z-index: 20;
             background: rgba(35, 0, 0, 0.95); border: 1px solid #ff0000;
-            color: #ff4444; padding: 8px 15px; border-radius: 6px;
-            text-align: center; display: none; width: 80%; max-width: 280px;
+            color: #ff4444; padding: 10px 18px; border-radius: 8px;
+            text-align: center; display: none; width: 85%; max-width: 320px;
             box-shadow: 0 0 15px rgba(255, 0, 0, 0.6);
         }
     </style>
@@ -135,20 +135,20 @@
     </div>
 
     <div id="bingo-banner">
-        <div style="font-size:13px; font-weight:bold; color:#ff0000;">[ TARGET CENTRATO - OK ]</div>
-        <div style="font-size:9px; margin-top:1px;" id="bingoInfo">Puntamento oculare raggiunto</div>
+        <div style="font-size:14px; font-weight:bold; color:#ff0000;">[ TARGET CENTRATO - OK ]</div>
+        <div style="font-size:10px; margin-top:2px;" id="bingoInfo">Puntamento oculare raggiunto</div>
     </div>
 
     <canvas id="skyCanvas"></canvas>
 
-    <!-- Controlli Zoom Laterali -->
-    <div id="zoom-controls" style="position: absolute; right: 12px; bottom: 85px; z-index: 10; display: flex; flex-direction: column; gap: 6px;">
-        <button class="zoom-btn" onclick="zoomIn()" style="width: 40px; height: 40px; border-radius: 12px; font-size: 16px; background: linear-gradient(135deg, #250000, #100000); border: 1px solid #990000; color: #ff4444; cursor: pointer;">+</button>
-        <button class="zoom-btn" onclick="zoomOut()" style="width: 40px; height: 40px; border-radius: 12px; font-size: 16px; background: linear-gradient(135deg, #250000, #100000); border: 1px solid #990000; color: #ff4444; cursor: pointer;">−</button>
-        <button class="zoom-btn" onclick="resetZoom()" style="width: 40px; height: 40px; border-radius: 12px; font-size: 14px; background: linear-gradient(135deg, #250000, #100000); border: 1px solid #990000; color: #ff4444; cursor: pointer;" title="Reset">🏠</button>
+    <!-- Controlli Zoom Laterali Più Comodi -->
+    <div id="zoom-controls" style="position: absolute; right: 16px; bottom: 95px; z-index: 10; display: flex; flex-direction: column; gap: 8px;">
+        <button class="zoom-btn" onclick="zoomIn()" style="width: 46px; height: 46px; border-radius: 14px; font-size: 20px; background: linear-gradient(135deg, #250000, #100000); border: 1px solid #990000; color: #ff4444; cursor: pointer;">+</button>
+        <button class="zoom-btn" onclick="zoomOut()" style="width: 46px; height: 46px; border-radius: 14px; font-size: 20px; background: linear-gradient(135deg, #250000, #100000); border: 1px solid #990000; color: #ff4444; cursor: pointer;">−</button>
+        <button class="zoom-btn" onclick="resetZoom()" style="width: 46px; height: 46px; border-radius: 14px; font-size: 16px; background: linear-gradient(135deg, #250000, #100000); border: 1px solid #990000; color: #ff4444; cursor: pointer;" title="Reset">🏠</button>
     </div>
 
-    <!-- BARRA NAVIGAZIONE INFERIORE A ICONE QUADRATE -->
+    <!-- BARRA NAVIGAZIONE INFERIORE -->
     <div id="hud-bottom-bar">
         <div class="nav-btn" onclick="openPanel('panel-menu')" title="Menu e Modalità">
             <span class="nav-icon">⚙</span>
@@ -180,18 +180,18 @@
         </div>
         <div class="info-panel">
             <b>MODALITÀ DI FUNZIONAMENTO:</b>
-            <select id="modeSelect" onchange="toggleMode()" style="margin-top: 6px;">
+            <select id="modeSelect" onchange="toggleMode()" style="margin-top: 8px;">
                 <option value="simulation">🕹 SIMULAZIONE / MANUALE (Drag Map)</option>
                 <option value="sensors">🧭 SENSORI REALI / BROWSER</option>
                 <option value="online">🌐 GITHUB HIGH-RES SYNC</option>
             </select>
         </div>
-        <div class="info-panel" style="margin-top: 8px;">
+        <div class="info-panel" style="margin-top: 10px;">
             <b>VISUALIZZAZIONE:</b>
-            <button class="zoom-btn" id="constellationToggleBtn" onclick="toggleConstellations()" style="width: 100%; height: 36px; border-radius: 6px; font-size: 10px; background: #350000; border: 1px solid #ff0000; color: #ff6666; margin-top: 6px; cursor: pointer;">🌌 COSTELLAZIONI: ATTIVE</button>
+            <button class="zoom-btn" id="constellationToggleBtn" onclick="toggleConstellations()" style="width: 100%; height: 42px; border-radius: 8px; font-size: 11px; background: #350000; border: 1px solid #ff0000; color: #ff6666; margin-top: 8px; cursor: pointer; font-weight: bold;">🌌 COSTELLAZIONI: ATTIVE</button>
         </div>
-        <div class="info-panel" style="font-size: 9px; color: #aa3333; text-align: center; margin-top: 5px;">
-            AstroDSC Pro v3.6 - Direct Sensors Start
+        <div class="info-panel" style="font-size: 10px; color: #aa3333; text-align: center; margin-top: auto;">
+            AstroDSC Pro v3.7 - Full Screen Panels & Calibrated Sensors
         </div>
     </div>
 
@@ -202,7 +202,7 @@
             <button class="back-btn" onclick="closePanels()">[ ← BACK ]</button>
         </div>
         <input type="text" id="searchInput" placeholder="Cerca Sirio, Vega, M31, NGC..." oninput="filterCatalog()">
-        <select id="targetSelect" onchange="onSelectTarget()" size="8" style="height: 160px;"></select>
+        <select id="targetSelect" onchange="onSelectTarget()" size="12" style="height: 280px;"></select>
         <div class="filter-group">
             <div class="filter-tab active" onclick="setFilter('ALL', this)">TUTTI</div>
             <div class="filter-tab" onclick="setFilter('Star', this)">STELLE</div>
@@ -229,8 +229,8 @@
             <span>★ COSA OSSERVARE STASERA</span>
             <button class="back-btn" onclick="closePanels()">[ ← BACK ]</button>
         </div>
-        <div class="info-panel" style="margin-bottom: 4px;">Target visibili ordinati per altezza:</div>
-        <select id="tonightSelect" onchange="onSelectTonight()" size="8" style="height: 180px;"></select>
+        <div class="info-panel" style="margin-bottom: 6px;">Target visibili ordinati per altezza:</div>
+        <select id="tonightSelect" onchange="onSelectTonight()" size="12" style="height: 320px;"></select>
     </div>
 
     <script>
@@ -322,7 +322,7 @@
         let userLon = 9.69;
         let phoneAz = 0;
         let phoneAlt = 45.05; 
-        let fov = 70; 
+        let fov = 110; // FOV iniziale più ampio e confortevole
         const FOV_THRESHOLD_FOR_IMAGE = 45;
 
         let searchCategoryFilter = 'ALL';
@@ -359,8 +359,8 @@
         }
 
         function zoomIn() { fov = Math.max(10, fov - 10); }
-        function zoomOut() { fov = Math.min(130, fov + 10); }
-        function resetZoom() { fov = 70; }
+        function zoomOut() { fov = Math.min(140, fov + 10); }
+        function resetZoom() { fov = 110; }
 
         function getLST() {
             const now = new Date();
@@ -476,8 +476,8 @@
                 ctx.stroke();
 
                 ctx.fillStyle = "#ff3333";
-                ctx.font = "9px monospace";
-                ctx.fillText("[ LINEA ORIZZONTE 0° ]", 10, horizonAlt0Y > 20 ? horizonAlt0Y - 5 : horizonAlt0Y + 15);
+                ctx.font = "10px monospace";
+                ctx.fillText("[ LINEA ORIZZONTE 0° ]", 12, horizonAlt0Y > 20 ? horizonAlt0Y - 6 : horizonAlt0Y + 16);
             }
 
             const starCoordsCache = {};
@@ -568,19 +568,20 @@
                 }
 
                 ctx.fillStyle = "#ff4444";
-                ctx.font = "9px monospace";
+                ctx.font = "10px monospace";
                 ctx.fillText(obj.id, x + 6, y + 3);
             });
 
+            // Reticolo centrale di mira PERFETTAMENTE TONDO
             ctx.strokeStyle = "#ff0000";
-            ctx.lineWidth = 1.2;
+            ctx.lineWidth = 1.5;
             ctx.beginPath();
-            ctx.arc(cx, cy, 20, 0, 2 * Math.PI);
-            ctx.arc(cx, cy, 40, 0, 2 * Math.PI);
-            ctx.moveTo(cx - 50, cy); ctx.lineTo(cx - 10, cy);
-            ctx.moveTo(cx + 10, cy); ctx.lineTo(cx + 50, cy);
-            ctx.moveTo(cx, cy - 50); ctx.lineTo(cx, cy - 10);
-            ctx.moveTo(cx, cy + 10); ctx.lineTo(cx, cy + 50);
+            ctx.arc(cx, cy, 25, 0, 2 * Math.PI);
+            ctx.arc(cx, cy, 50, 0, 2 * Math.PI);
+            ctx.moveTo(cx - 60, cy); ctx.lineTo(cx - 15, cy);
+            ctx.moveTo(cx + 15, cy); ctx.lineTo(cx + 60, cy);
+            ctx.moveTo(cx, cy - 60); ctx.lineTo(cx, cy - 15);
+            ctx.moveTo(cx, cy + 15); ctx.lineTo(cx, cy + 60);
             ctx.stroke();
 
             if (selectedTarget) {
@@ -606,16 +607,16 @@
                         ctx.fillStyle = "#ff0000";
                         ctx.lineWidth = 2;
                         let angle = Math.atan2(targetScreenPos.y - cy, targetScreenPos.x - cx);
-                        let arrowX = cx + Math.cos(angle) * 60;
-                        let arrowY = cy + Math.sin(angle) * 60;
+                        let arrowX = cx + Math.cos(angle) * 70;
+                        let arrowY = cy + Math.sin(angle) * 70;
 
                         ctx.beginPath();
-                        ctx.arc(arrowX, arrowY, 10, 0, 2 * Math.PI);
+                        ctx.arc(arrowX, arrowY, 12, 0, 2 * Math.PI);
                         ctx.stroke();
                         ctx.beginPath();
-                        ctx.moveTo(arrowX + Math.cos(angle) * 12, arrowY + Math.sin(angle) * 12);
-                        ctx.lineTo(arrowX + Math.cos(angle + 2.5) * 6, arrowY + Math.sin(angle + 2.5) * 6);
-                        ctx.lineTo(arrowX + Math.cos(angle - 2.5) * 6, arrowY + Math.sin(angle - 2.5) * 6);
+                        ctx.moveTo(arrowX + Math.cos(angle) * 14, arrowY + Math.sin(angle) * 14);
+                        ctx.lineTo(arrowX + Math.cos(angle + 2.5) * 7, arrowY + Math.sin(angle + 2.5) * 7);
+                        ctx.lineTo(arrowX + Math.cos(angle - 2.5) * 7, arrowY + Math.sin(angle - 2.5) * 7);
                         ctx.fill();
                         ctx.restore();
                     }
@@ -701,7 +702,7 @@
             ctx = canvas.getContext("2d");
         }
 
-        /* AVVIO DIRETTO SENSORI CON IL PULSANTE START SESSIONE */
+        /* AVVIO DIRETTO SENSORI CON IL PULSANTE SESSION */
         function startObservationSession() {
             closePanels();
             operationMode = 'sensors';
@@ -721,14 +722,12 @@
         function handleOrientation(e) {
             if (operationMode !== 'sensors') return;
             
-            // Gestione robusta dell'azimut (bussola) e dell'altezza (beta)
+            // Corretta calibrazione dell'azimut e dell'altezza per i sensori dello smartphone
             let heading = e.webkitCompassHeading !== undefined ? e.webkitCompassHeading : e.alpha;
             if (heading !== null) {
-                // Inverte o normalizza a seconda del sensore del browser
-                phoneAz = (360 - heading) % 360;
+                phoneAz = heading; // 0=Nord, 90=Est, 180=Sud, 270=Ovest
             }
             if (e.beta !== null) {
-                // Beta misura l'inclinazione del telefono (-180 a 180)
                 phoneAlt = e.beta > 90 ? 180 - e.beta : e.beta;
             }
         }
