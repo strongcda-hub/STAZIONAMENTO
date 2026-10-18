@@ -191,7 +191,7 @@
             <button class="zoom-btn" id="constellationToggleBtn" onclick="toggleConstellations()" style="width: 100%; height: 42px; border-radius: 8px; font-size: 11px; background: #350000; border: 1px solid #ff0000; color: #ff6666; margin-top: 8px; cursor: pointer; font-weight: bold;">🌌 COSTELLAZIONI: ATTIVE</button>
         </div>
         <div class="info-panel" style="font-size: 10px; color: #aa3333; text-align: center; margin-top: auto;">
-            AstroDSC Pro v4.0 - Stable Layout & Direct Sensors
+            AstroDSC Pro v4.1 - Polaris Corrected & GitHub Sync
         </div>
     </div>
 
@@ -704,7 +704,7 @@
             ctx = canvas.getContext("2d");
         }
 
-        /* GESTIONE SENSORI STABILE E CORRETTA (VERSIONE 4.0) */
+        /* GESTIONE SENSORI CON POLARIS CORRETTA (OFFSET 180°) */
         function startObservationSession() {
             closePanels();
             operationMode = 'sensors';
@@ -724,18 +724,17 @@
         function handleOrientation(e) {
             if (operationMode !== 'sensors') return;
             
-            // Gestione standard della bussola (iOS webkitCompassHeading / Android alpha)
-            let heading = 0;
+            let rawHeading = 0;
             if (e.webkitCompassHeading !== undefined && e.webkitCompassHeading !== null) {
-                heading = e.webkitCompassHeading;
+                rawHeading = e.webkitCompassHeading;
             } else if (e.alpha !== null) {
-                heading = (360 - e.alpha) % 360;
+                rawHeading = (360 - e.alpha) % 360;
             }
             
-            phoneAz = heading;
+            // Corretto allineamento polare (offset speculare di 180° per correggere la direzione opposta)
+            phoneAz = (rawHeading + 180) % 360;
 
             if (e.beta !== null) {
-                // beta: inclinazione frontale del telefono
                 phoneAlt = e.beta;
             }
         }
