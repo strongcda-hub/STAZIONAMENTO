@@ -191,7 +191,7 @@
             <button class="zoom-btn" id="constellationToggleBtn" onclick="toggleConstellations()" style="width: 100%; height: 42px; border-radius: 8px; font-size: 11px; background: #350000; border: 1px solid #ff0000; color: #ff6666; margin-top: 8px; cursor: pointer; font-weight: bold;">🌌 COSTELLAZIONI: ATTIVE</button>
         </div>
         <div class="info-panel" style="font-size: 10px; color: #aa3333; text-align: center; margin-top: auto;">
-            AstroDSC Pro v3.7 - Full Screen Panels & Calibrated Sensors
+            AstroDSC Pro v3.8 - Corrected Sensor Kinematics
         </div>
     </div>
 
@@ -322,7 +322,7 @@
         let userLon = 9.69;
         let phoneAz = 0;
         let phoneAlt = 45.05; 
-        let fov = 110; // FOV iniziale più ampio e confortevole
+        let fov = 110; 
         const FOV_THRESHOLD_FOR_IMAGE = 45;
 
         let searchCategoryFilter = 'ALL';
@@ -702,7 +702,7 @@
             ctx = canvas.getContext("2d");
         }
 
-        /* AVVIO DIRETTO SENSORI CON IL PULSANTE SESSION */
+        /* AVVIO DIRETTO SENSORI CON CINEMATICA CORRETTA */
         function startObservationSession() {
             closePanels();
             operationMode = 'sensors';
@@ -722,12 +722,13 @@
         function handleOrientation(e) {
             if (operationMode !== 'sensors') return;
             
-            // Corretta calibrazione dell'azimut e dell'altezza per i sensori dello smartphone
+            // Corretta gestione dell'azimut e inversione cinematica per rispecchiare i movimenti reali del telefono
             let heading = e.webkitCompassHeading !== undefined ? e.webkitCompassHeading : e.alpha;
             if (heading !== null) {
-                phoneAz = heading; // 0=Nord, 90=Est, 180=Sud, 270=Ovest
+                phoneAz = (360 - heading) % 360;
             }
             if (e.beta !== null) {
+                // Beta (inclinazione verticale): adattata per l'uso su montatura / telescopio
                 phoneAlt = e.beta > 90 ? 180 - e.beta : e.beta;
             }
         }
