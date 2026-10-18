@@ -37,6 +37,13 @@
 
         .hud-val { color: #ff3333; font-weight: bold; }
 
+        .reset-target-btn {
+            background: #350000; color: #ff4444; border: 1px solid #ff0000;
+            padding: 2px 6px; border-radius: 4px; font-size: 10px; cursor: pointer;
+            margin-left: 6px; font-weight: bold;
+        }
+        .reset-target-btn:active { background: #660000; color: #fff; }
+
         /* Barra di Navigazione Inferiore */
         #hud-bottom-bar {
             position: absolute; bottom: 16px; left: 50%;
@@ -131,7 +138,7 @@
 
     <div id="hud-top">
         <div>GPS: <span id="gpsStatus" class="hud-val">45.05°, 9.69°</span></div>
-        <div>TGT: <span id="targetCoords" class="hud-val">--/--</span></div>
+        <div>TGT: <span id="targetCoords" class="hud-val">--/--</span> <button class="reset-target-btn" onclick="resetTarget()" title="Annulla Target">✕</button></div>
         <div>Δ: <span id="deltaCoords" class="hud-val">--/--</span></div>
     </div>
 
@@ -192,7 +199,7 @@
             <button class="zoom-btn" id="constellationToggleBtn" onclick="toggleConstellations()" style="width: 100%; height: 42px; border-radius: 8px; font-size: 11px; background: #350000; border: 1px solid #ff0000; color: #ff6666; margin-top: 8px; cursor: pointer; font-weight: bold;">🌌 COSTELLAZIONI: ATTIVE</button>
         </div>
         <div class="info-panel" style="font-size: 10px; color: #aa3333; text-align: center; margin-top: auto;">
-            AstroDSC Pro v4.2 - Full Modes Restored
+            AstroDSC Pro v4.3 - Vignette Blend & Target Reset
         </div>
     </div>
 
@@ -361,6 +368,12 @@
         function zoomIn() { fov = Math.max(10, fov - 10); }
         function zoomOut() { fov = Math.min(140, fov + 10); }
         function resetZoom() { fov = 100; }
+
+        function resetTarget() {
+            selectedTarget = null;
+            const targetSelect = document.getElementById("targetSelect");
+            if (targetSelect) targetSelect.value = "";
+        }
 
         function getLST() {
             const now = new Date();
@@ -539,15 +552,25 @@
                 if (x < -30 || x > canvas.width + 30 || y < -30 || y > canvas.height + 30) return;
 
                 let imageRendered = false;
-                // Carica immagini GitHub solo in modalità online e se il FOV è abbastanza stretto
+                // Rendering immagini GitHub senza cornice e con sfumatura radiale (vignettatura)
                 if (operationMode === 'online' && fov <= FOV_THRESHOLD_FOR_IMAGE && isTarget && (obj.id.startsWith("M") || obj.id.startsWith("NGC"))) {
                     let imgResult = getOrLoadGitHubImage(obj.id);
                     if (imgResult && imgResult !== 'loading') {
                         let imgSize = 220;
+                        ctx.save();
+                        ctx.beginPath();
+                        ctx.arc(x, y, imgSize / 2, 0, Math.PI * 2);
+                        ctx.clip();
                         ctx.drawImage(imgResult, x - imgSize / 2, y - imgSize / 2, imgSize, imgSize);
-                        ctx.strokeStyle = "#ff0000";
-                        ctx.lineWidth = 1.5;
-                        ctx.strokeRect(x - imgSize / 2, y - imgSize / 2, imgSize, imgSize);
+                        
+                        // Sfumatura bordi (vignettatura circolare)
+                        let gradient = ctx.createRadialGradient(x, y, imgSize * 0.2, x, y, imgSize * 0.5);
+                        gradient.addColorStop(0, 'rgba(0, 0, 0, 0)');
+                        gradient.addColorStop(1, 'rgba(0, 0, 0, 0.95)');
+                        ctx.fillStyle = gradient;
+                        ctx.fillRect(x - imgSize / 2, y - imgSize / 2, imgSize, imgSize);
+                        ctx.restore();
+
                         imageRendered = true;
                     }
                 }
@@ -595,7 +618,7 @@
                 while (dAz > 180) dAz -= 360;
                 while (dAz < -180) dAz += 360;
 
-                document.getElementById("targetCoords").textContent = `${tCoords.alt.toFixed(0)}°/${tCoords.az.toFixed(0)}°`;
+                document.getElementById("targetCoords").innerHTML = `${selectedTarget.id} (${tCoords.alt.toFixed(0)}°/${tCoords.az.toFixed(0)}°) <button class="reset-target-btn" onclick="resetTarget()" title="Annulla Target">✕</button>`;
                 document.getElementById("deltaCoords").textContent = `${dAlt.toFixed(1)}°/${dAz.toFixed(1)}°`;
 
                 let dist = Math.sqrt(dAlt * dAlt + dAz * dAz);
@@ -627,8 +650,8 @@
                 }
             } else {
                 document.getElementById("bingo-banner").style.display = "none";
-                document.getElementById("targetCoords").textContent = "--/--";
-                document.getElementById("deltaCoords").textContent = "--/--";
+                document.getElementById("targetCoords").innerHTML = `--/-- <button class="reset-target-btn" onclick="resetTarget()" title="Annulla Target">✕</button>`;
+                document.getElementById("deltaCoords").textContent = `--/--`;
             }
         }
 
@@ -709,7 +732,6 @@
         /* GESTIONE SESSIONE E SENSORI */
         function startObservationSession() {
             closePanels();
-            // Default di sessione sui sensori fisici (modalità offline o online a seconda del menu)
             if (operationMode === 'simulation') {
                 operationMode = 'offline';
                 document.getElementById("modeSelect").value = 'offline';
