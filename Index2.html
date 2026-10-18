@@ -16,7 +16,7 @@
 
         #skyCanvas {
             position: absolute; top: 0; left: 0;
-            width: 100%; height: 100%;
+            width: 100vw; height: 100vh;
             background-color: #000000 !important;
             z-index: 1;
             display: block;
@@ -141,7 +141,7 @@
 
     <canvas id="skyCanvas"></canvas>
 
-    <!-- Controlli Zoom Laterali Più Comodi -->
+    <!-- Controlli Zoom Laterali -->
     <div id="zoom-controls" style="position: absolute; right: 16px; bottom: 95px; z-index: 10; display: flex; flex-direction: column; gap: 8px;">
         <button class="zoom-btn" onclick="zoomIn()" style="width: 46px; height: 46px; border-radius: 14px; font-size: 20px; background: linear-gradient(135deg, #250000, #100000); border: 1px solid #990000; color: #ff4444; cursor: pointer;">+</button>
         <button class="zoom-btn" onclick="zoomOut()" style="width: 46px; height: 46px; border-radius: 14px; font-size: 20px; background: linear-gradient(135deg, #250000, #100000); border: 1px solid #990000; color: #ff4444; cursor: pointer;">−</button>
@@ -183,7 +183,6 @@
             <select id="modeSelect" onchange="toggleMode()" style="margin-top: 8px;">
                 <option value="simulation">🕹 SIMULAZIONE / MANUALE (Drag Map)</option>
                 <option value="sensors">🧭 SENSORI REALI / BROWSER</option>
-                <option value="online">🌐 GITHUB HIGH-RES SYNC</option>
             </select>
         </div>
         <div class="info-panel" style="margin-top: 10px;">
@@ -191,7 +190,7 @@
             <button class="zoom-btn" id="constellationToggleBtn" onclick="toggleConstellations()" style="width: 100%; height: 42px; border-radius: 8px; font-size: 11px; background: #350000; border: 1px solid #ff0000; color: #ff6666; margin-top: 8px; cursor: pointer; font-weight: bold;">🌌 COSTELLAZIONI: ATTIVE</button>
         </div>
         <div class="info-panel" style="font-size: 10px; color: #aa3333; text-align: center; margin-top: auto;">
-            AstroDSC Pro v3.8 - Corrected Sensor Kinematics
+            AstroDSC Pro v3.9 - Absolute Sensor Alignment
         </div>
     </div>
 
@@ -235,42 +234,42 @@
 
     <script>
         const catalogStars = [
-            { id: "Sirio", name: "Sirius (Alpha Canis Majoris)", type: "Star", ra: 6.75, dec: -16.71, mag: -1.46, ox: 6, oy: 4 },
-            { id: "Canopo", name: "Canopus (Alpha Carinae)", type: "Star", ra: 6.40, dec: -52.70, mag: -0.74, ox: 6, oy: 4 },
-            { id: "Arturo", name: "Arcturus (Alpha Boötis)", type: "Star", ra: 14.26, dec: 19.18, mag: -0.05, ox: 6, oy: 4 },
-            { id: "Vega", name: "Vega (Alpha Lyrae)", type: "Star", ra: 18.62, dec: 38.78, mag: 0.03, ox: 8, oy: 3 },
-            { id: "Capella", name: "Capella (Alpha Aurigae)", type: "Star", ra: 5.28, dec: 46.00, mag: 0.08, ox: 6, oy: 4 },
-            { id: "Rigel", name: "Rigel (Beta Orionis)", type: "Star", ra: 5.24, dec: -8.20, mag: 0.13, ox: 6, oy: 4 },
-            { id: "Procione", name: "Procyon (Alpha Canis Minoris)", type: "Star", ra: 7.65, dec: 5.22, mag: 0.38, ox: 6, oy: 4 },
-            { id: "Betelgeuse", name: "Betelgeuse (Alpha Orionis)", type: "Star", ra: 5.92, dec: 7.41, mag: 0.50, ox: 6, oy: 4 },
-            { id: "Altair", name: "Altair (Alpha Aquilae)", type: "Star", ra: 19.84, dec: 8.87, mag: 0.77, ox: 6, oy: -4 },
-            { id: "Aldebaran", name: "Aldebaran (Alpha Tauri)", type: "Star", ra: 4.60, dec: 16.51, mag: 0.85, ox: 6, oy: 4 },
-            { id: "Spica", name: "Spica (Alpha Virginis)", type: "Star", ra: 13.42, dec: -11.16, mag: 0.98, ox: 6, oy: 4 },
-            { id: "Antares", name: "Antares (Alpha Scorpii)", type: "Star", ra: 16.49, dec: -26.43, mag: 1.06, ox: 6, oy: 4 },
-            { id: "Polluce", name: "Pollux (Beta Geminorum)", type: "Star", ra: 7.76, dec: 28.03, mag: 1.14, ox: 6, oy: 4 },
-            { id: "Fomalhaut", name: "Fomalhaut (Alpha Piscis Austrini)", type: "Star", ra: 22.96, dec: -29.62, mag: 1.17, ox: 6, oy: 4 },
-            { id: "Deneb", name: "Deneb (Alpha Cygni)", type: "Star", ra: 20.69, dec: 45.28, mag: 1.25, ox: 6, oy: -4 },
-            { id: "Regolo", name: "Regulus (Alpha Leonis)", type: "Star", ra: 10.14, dec: 11.97, mag: 1.35, ox: 6, oy: 4 },
-            { id: "Castore", name: "Castor (Alpha Geminorum)", type: "Star", ra: 7.58, dec: 31.89, mag: 1.58, ox: 6, oy: 4 },
-            { id: "Bellatrix", name: "Bellatrix (Gamma Orionis)", type: "Star", ra: 5.42, dec: 6.35, mag: 1.64, ox: 6, oy: 4 },
-            { id: "Alnilam", name: "Alnilam (Epsilon Orionis)", type: "Star", ra: 5.60, dec: -1.20, mag: 1.69, ox: 6, oy: 4 },
-            { id: "Alnitak", name: "Alnitak (Zeta Orionis)", type: "Star", ra: 5.68, dec: -1.94, mag: 1.77, ox: 6, oy: 4 },
-            { id: "Alioth", name: "Alioth (Epsilon Ursae Majoris)", type: "Star", ra: 12.90, dec: 55.96, mag: 1.77, ox: 5, oy: -5 },
-            { id: "Dubhe", name: "Dubhe (Alpha Ursae Majoris)", type: "Star", ra: 11.06, dec: 61.75, mag: 1.79, ox: 5, oy: 5 },
-            { id: "Merak", name: "Merak (Beta Ursae Majoris)", type: "Star", ra: 11.03, dec: 56.38, mag: 2.37, ox: 5, oy: 5 },
-            { id: "Phecda", name: "Phecda (Gamma Ursae Majoris)", type: "Star", ra: 11.90, dec: 53.69, mag: 2.44, ox: 5, oy: 5 },
-            { id: "Megrez", name: "Megrez (Delta Ursae Majoris)", type: "Star", ra: 12.25, dec: 57.03, mag: 3.31, ox: 5, oy: -5 },
-            { id: "Mizar", name: "Mizar (Zeta Ursae Majoris)", type: "Star", ra: 13.40, dec: 54.92, mag: 2.23, ox: 5, oy: -5 },
-            { id: "Alkaid", name: "Alkaid (Eta Ursae Majoris)", type: "Star", ra: 13.79, dec: 49.31, mag: 1.86, ox: 5, oy: 5 },
-            { id: "Polaris", name: "Polaris (Alpha Ursae Minoris)", type: "Star", ra: 2.53, dec: 89.26, mag: 1.97, ox: 5, oy: -5 },
-            { id: "Shedar", name: "Shedar (Alpha Cassiopeiae)", type: "Star", ra: 0.68, dec: 56.54, mag: 2.24, ox: 6, oy: -2 },
-            { id: "Caph", name: "Caph (Beta Cassiopeiae)", type: "Star", ra: 0.15, dec: 59.15, mag: 2.28, ox: 6, oy: -2 },
-            { id: "GammaCas", name: "Gamma Cassiopeiae", type: "Star", ra: 0.94, dec: 60.72, mag: 2.15, ox: 6, oy: -2 },
-            { id: "Ruchbah", name: "Ruchbah (Delta Cassiopeiae)", type: "Star", ra: 1.43, dec: 60.24, mag: 2.68, ox: 6, oy: -2 },
-            { id: "Segin", name: "Segin (Epsilon Cassiopeiae)", type: "Star", ra: 1.90, dec: 63.67, mag: 3.35, ox: 6, oy: -2 },
-            { id: "Sheliak", name: "Sheliak (Beta Lyrae)", type: "Star", ra: 18.83, dec: 33.36, mag: 3.52, ox: 8, oy: 3 },
-            { id: "Sulafat", name: "Sulafat (Gamma Lyrae)", type: "Star", ra: 18.98, dec: 32.69, mag: 3.25, ox: 5, oy: -8 },
-            { id: "Sadr", name: "Sadr (Gamma Cygni)", type: "Star", ra: 20.37, dec: 40.26, mag: 2.23, ox: 6, oy: 10 }
+            { id: "Sirio", name: "Sirius (Alpha Canis Majoris)", type: "Star", ra: 6.75, dec: -16.71, mag: -1.46 },
+            { id: "Canopo", name: "Canopus (Alpha Carinae)", type: "Star", ra: 6.40, dec: -52.70, mag: -0.74 },
+            { id: "Arturo", name: "Arcturus (Alpha Boötis)", type: "Star", ra: 14.26, dec: 19.18, mag: -0.05 },
+            { id: "Vega", name: "Vega (Alpha Lyrae)", type: "Star", ra: 18.62, dec: 38.78, mag: 0.03 },
+            { id: "Capella", name: "Capella (Alpha Aurigae)", type: "Star", ra: 5.28, dec: 46.00, mag: 0.08 },
+            { id: "Rigel", name: "Rigel (Beta Orionis)", type: "Star", ra: 5.24, dec: -8.20, mag: 0.13 },
+            { id: "Procione", name: "Procyon (Alpha Canis Minoris)", type: "Star", ra: 7.65, dec: 5.22, mag: 0.38 },
+            { id: "Betelgeuse", name: "Betelgeuse (Alpha Orionis)", type: "Star", ra: 5.92, dec: 7.41, mag: 0.50 },
+            { id: "Altair", name: "Altair (Alpha Aquilae)", type: "Star", ra: 19.84, dec: 8.87, mag: 0.77 },
+            { id: "Aldebaran", name: "Aldebaran (Alpha Tauri)", type: "Star", ra: 4.60, dec: 16.51, mag: 0.85 },
+            { id: "Spica", name: "Spica (Alpha Virginis)", type: "Star", ra: 13.42, dec: -11.16, mag: 0.98 },
+            { id: "Antares", name: "Antares (Alpha Scorpii)", type: "Star", ra: 16.49, dec: -26.43, mag: 1.06 },
+            { id: "Polluce", name: "Pollux (Beta Geminorum)", type: "Star", ra: 7.76, dec: 28.03, mag: 1.14 },
+            { id: "Fomalhaut", name: "Fomalhaut (Alpha Piscis Austrini)", type: "Star", ra: 22.96, dec: -29.62, mag: 1.17 },
+            { id: "Deneb", name: "Deneb (Alpha Cygni)", type: "Star", ra: 20.69, dec: 45.28, mag: 1.25 },
+            { id: "Regolo", name: "Regulus (Alpha Leonis)", type: "Star", ra: 10.14, dec: 11.97, mag: 1.35 },
+            { id: "Castore", name: "Castor (Alpha Geminorum)", type: "Star", ra: 7.58, dec: 31.89, mag: 1.58 },
+            { id: "Bellatrix", name: "Bellatrix (Gamma Orionis)", type: "Star", ra: 5.42, dec: 6.35, mag: 1.64 },
+            { id: "Alnilam", name: "Alnilam (Epsilon Orionis)", type: "Star", ra: 5.60, dec: -1.20, mag: 1.69 },
+            { id: "Alnitak", name: "Alnitak (Zeta Orionis)", type: "Star", ra: 5.68, dec: -1.94, mag: 1.77 },
+            { id: "Alioth", name: "Alioth (Epsilon Ursae Majoris)", type: "Star", ra: 12.90, dec: 55.96, mag: 1.77 },
+            { id: "Dubhe", name: "Dubhe (Alpha Ursae Majoris)", type: "Star", ra: 11.06, dec: 61.75, mag: 1.79 },
+            { id: "Merak", name: "Merak (Beta Ursae Majoris)", type: "Star", ra: 11.03, dec: 56.38, mag: 2.37 },
+            { id: "Phecda", name: "Phecda (Gamma Ursae Majoris)", type: "Star", ra: 11.90, dec: 53.69, mag: 2.44 },
+            { id: "Megrez", name: "Megrez (Delta Ursae Majoris)", type: "Star", ra: 12.25, dec: 57.03, mag: 3.31 },
+            { id: "Mizar", name: "Mizar (Zeta Ursae Majoris)", type: "Star", ra: 13.40, dec: 54.92, mag: 2.23 },
+            { id: "Alkaid", name: "Alkaid (Eta Ursae Majoris)", type: "Star", ra: 13.79, dec: 49.31, mag: 1.86 },
+            { id: "Polaris", name: "Polaris (Alpha Ursae Minoris)", type: "Star", ra: 2.53, dec: 89.26, mag: 1.97 },
+            { id: "Shedar", name: "Shedar (Alpha Cassiopeiae)", type: "Star", ra: 0.68, dec: 56.54, mag: 2.24 },
+            { id: "Caph", name: "Caph (Beta Cassiopeiae)", type: "Star", ra: 0.15, dec: 59.15, mag: 2.28 },
+            { id: "GammaCas", name: "Gamma Cassiopeiae", type: "Star", ra: 0.94, dec: 60.72, mag: 2.15 },
+            { id: "Ruchbah", name: "Ruchbah (Delta Cassiopeiae)", type: "Star", ra: 1.43, dec: 60.24, mag: 2.68 },
+            { id: "Segin", name: "Segin (Epsilon Cassiopeiae)", type: "Star", ra: 1.90, dec: 63.67, mag: 3.35 },
+            { id: "Sheliak", name: "Sheliak (Beta Lyrae)", type: "Star", ra: 18.83, dec: 33.36, mag: 3.52 },
+            { id: "Sulafat", name: "Sulafat (Gamma Lyrae)", type: "Star", ra: 18.98, dec: 32.69, mag: 3.25 },
+            { id: "Sadr", name: "Sadr (Gamma Cygni)", type: "Star", ra: 20.37, dec: 40.26, mag: 2.23 }
         ];
 
         function pseudoRandom(seed) {
@@ -322,13 +321,12 @@
         let userLon = 9.69;
         let phoneAz = 0;
         let phoneAlt = 45.05; 
-        let fov = 110; 
+        let fov = 100; // FOV ampio e perfetto per il planetario
         const FOV_THRESHOLD_FOR_IMAGE = 45;
 
         let searchCategoryFilter = 'ALL';
         let selectedTarget = null;
         let canvas, ctx;
-        let sensorsActive = false;
         let operationMode = 'simulation';
         let showConstellations = true;
 
@@ -360,7 +358,7 @@
 
         function zoomIn() { fov = Math.max(10, fov - 10); }
         function zoomOut() { fov = Math.min(140, fov + 10); }
-        function resetZoom() { fov = 110; }
+        function resetZoom() { fov = 100; }
 
         function getLST() {
             const now = new Date();
@@ -414,7 +412,7 @@
         }
 
         function drawClippedLine(p1, p2) {
-            const margin = 15;
+            const margin = 20;
             if (p1.x < -margin && p2.x < -margin) return;
             if (p1.x > canvas.width + margin && p2.x > canvas.width + margin) return;
             if (p1.y < -margin && p2.y < -margin) return;
@@ -458,6 +456,7 @@
             const now = Date.now();
             const isBlinkOn = Math.floor(now / 350) % 2 === 0;
 
+            // Griglia di altezza
             ctx.strokeStyle = "#330000";
             ctx.lineWidth = 1;
             for (let a = 0; a <= 90; a += 15) {
@@ -466,6 +465,7 @@
                 ctx.stroke();
             }
 
+            // Linea dell'orizzonte
             let horizonAlt0Y = cy + phoneAlt * scale;
             if (horizonAlt0Y >= -500 && horizonAlt0Y <= canvas.height + 500) {
                 ctx.strokeStyle = "#cc0000";
@@ -509,9 +509,10 @@
                 }
             });
 
+            // Disegno costellazioni
             if (showConstellations) {
-                ctx.strokeStyle = "#550000";
-                ctx.lineWidth = 1;
+                ctx.strokeStyle = "#770000";
+                ctx.lineWidth = 1.2;
                 constellationLines.forEach(line => {
                     let s1 = starCoordsCache[line[0]];
                     let s2 = starCoordsCache[line[1]];
@@ -572,7 +573,7 @@
                 ctx.fillText(obj.id, x + 6, y + 3);
             });
 
-            // Reticolo centrale di mira PERFETTAMENTE TONDO
+            // Reticolo centrale perfetto
             ctx.strokeStyle = "#ff0000";
             ctx.lineWidth = 1.5;
             ctx.beginPath();
@@ -702,7 +703,7 @@
             ctx = canvas.getContext("2d");
         }
 
-        /* AVVIO DIRETTO SENSORI CON CINEMATICA CORRETTA */
+        /* AVVIO SENSORI CON ALLINEAMENTO ASSOLUTO CORRETTO */
         function startObservationSession() {
             closePanels();
             operationMode = 'sensors';
@@ -722,13 +723,13 @@
         function handleOrientation(e) {
             if (operationMode !== 'sensors') return;
             
-            // Corretta gestione dell'azimut e inversione cinematica per rispecchiare i movimenti reali del telefono
+            // Gestione corretta della bussola standard e webkit (iOS/Android)
             let heading = e.webkitCompassHeading !== undefined ? e.webkitCompassHeading : e.alpha;
             if (heading !== null) {
-                phoneAz = (360 - heading) % 360;
+                phoneAz = heading; // Azimut assoluto coerente con la volta celeste
             }
             if (e.beta !== null) {
-                // Beta (inclinazione verticale): adattata per l'uso su montatura / telescopio
+                // Inclinazione verticale corretta
                 phoneAlt = e.beta > 90 ? 180 - e.beta : e.beta;
             }
         }
@@ -752,7 +753,7 @@
                 let dx = e.touches[0].clientX - startX;
                 let dy = e.touches[0].clientY - startY;
 
-                if (operationMode === 'simulation' || operationMode === 'online') {
+                if (operationMode === 'simulation') {
                     phoneAz = (phoneAz - dx * 0.2 + 360) % 360;
                     phoneAlt = Math.max(-20, Math.min(90, phoneAlt + dy * 0.2));
                 }
@@ -776,7 +777,7 @@
                 let dx = e.clientX - startX;
                 let dy = e.clientY - startY;
 
-                if (operationMode === 'simulation' || operationMode === 'online') {
+                if (operationMode === 'simulation') {
                     phoneAz = (phoneAz - dx * 0.2 + 360) % 360;
                     phoneAlt = Math.max(-20, Math.min(90, phoneAlt + dy * 0.2));
                 }
