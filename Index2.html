@@ -333,6 +333,9 @@
         let fov = 100; 
         const FOV_THRESHOLD_FOR_IMAGE = 45;
 
+        // Via Lattea procedurale (nessuna foto)
+        let mwReady = true;
+
         let searchCategoryFilter = 'ALL';
         let selectedTarget = null;
         let canvas, ctx;
@@ -426,6 +429,70 @@
             return { alt: altDeg, az: azDeg };
         }
 
+        // Conversione inversa: Alt/Az → RA/Dec (ore, gradi)
+        function altAzToRaDec(altDeg, azDeg, lstDeg) {
+            const altRad = altDeg * Math.PI / 180;
+            const azRad = azDeg * Math.PI / 180;
+            const latRad = userLat * Math.PI / 180;
+
+            const sinDec = Math.sin(altRad) * Math.sin(latRad) + Math.cos(altRad) * Math.cos(latRad) * Math.cos(azRad);
+            const decRad = Math.asin(Math.max(-1, Math.min(1, sinDec)));
+            const decDeg = decRad * 180 / Math.PI;
+
+            let cosHa = (Math.sin(altRad) - Math.sin(latRad) * Math.sin(decRad)) / (Math.cos(latRad) * Math.cos(decRad));
+            cosHa = Math.max(-1, Math.min(1, cosHa));
+            let haRad = Math.acos(cosHa);
+            if (Math.sin(azRad) > 0) haRad = -haRad; // segno corretto
+            let haDeg = haRad * 180 / Math.PI;
+
+            let raDeg = (lstDeg - haDeg + 360) % 360;
+            let raHours = raDeg / 15;
+            return { ra: raHours, dec: decDeg };
+        }
+
+        // RA/Dec (gradi) → longitudine/latitudine galattica
+        // Usando i valori standard IAU (Nord Galattico: RA 192.85948°, Dec +27.12825°)
+        function raDecToGalactic(raDeg, decDeg) {
+            const ra = raDeg * Math.PI / 180;
+            const dec = decDeg * Math.PI / 180;
+            const raNGP = 192.85948 * Math.PI / 180;
+            const decNGP = 27.12825 * Math.PI / 180;
+            const lNCP = 122.93192 * Math.PI / 180;
+
+            const sinB = Math.sin(dec) * Math.sin(decNGP) + Math.cos(dec) * Math.cos(decNGP) * Math.cos(ra - raNGP);
+            const b = Math.asin(Math.max(-1, Math.min(1, sinB)));
+
+            const y = Math.cos(dec) * Math.sin(ra - raNGP);
+            const x = Math.sin(dec) * Math.cos(decNGP) - Math.cos(dec) * Math.sin(decNGP) * Math.cos(ra - raNGP);
+            let l = Math.atan2(y, x);
+            l = lNCP - l;
+            l = (l * 180 / Math.PI + 360) % 360;
+            return { l: l, b: b * 180 / Math.PI };
+        }
+
+        // Conversione inversa: longitudine/latitudine galattica → RA/Dec (gradi)
+        function galacticToRaDec(lDeg, bDeg) {
+            const l = lDeg * Math.PI / 180;
+            const b = bDeg * Math.PI / 180;
+            const raNGP = 192.85948 * Math.PI / 180;
+            const decNGP = 27.12825 * Math.PI / 180;
+            const lNCP = 122.93192 * Math.PI / 180;
+
+            const sinB = Math.sin(b);
+            const cosB = Math.cos(b);
+            const sinL = Math.sin(lNCP - l);
+            const cosL = Math.cos(lNCP - l);
+
+            const sinDec = sinB * Math.sin(decNGP) + cosB * Math.cos(decNGP) * cosL;
+            const dec = Math.asin(Math.max(-1, Math.min(1, sinDec)));
+
+            const y = cosB * sinL;
+            const x = sinB * Math.cos(decNGP) - cosB * Math.sin(decNGP) * cosL;
+            let ra = Math.atan2(y, x) + raNGP;
+            ra = (ra * 180 / Math.PI + 360) % 360;
+            return { ra: ra / 15, dec: dec * 180 / Math.PI }; // ra in hours
+        }
+
         function drawClippedLine(p1, p2) {
             const margin = 20;
             if (p1.x < -margin && p2.x < -margin) return;
@@ -470,6 +537,103 @@
             const lst = getLST();
             const now = Date.now();
             const isBlinkOn = Math.floor(now / 350) % 2 === 0;
+
+            // ========== VIA LATTEA PROCEDURALE – banda continua e piena ==========
+            {
+                try {
+                    const cx = canvas.width / 2;
+                    const cy = canvas.height / 2;
+
+                    // Campiona densamente il piano galattico + spessore (banda più larga)
+                    const pts = [];
+                    for (let l = 0; l < 360; l += 1.8) {
+                        // più strati di latitudine → banda più larga e spalmata
+                        for (let db = -18; db <= 18; db += 3) {
+                            const eq = galacticToRaDec(l, db);
+                            const coords = raDecToAltAz(eq.ra, eq.dec, lst);
+
+                            let dAz = coords.az - phoneAz;
+                            while (dAz > 180) dAz -= 360;
+                            while (dAz < -180) dAz += 360;
+                            const dAlt = coords.alt - phoneAlt;
+
+                            const x = cx + dAz * scale;
+                            const y = cy - dAlt * scale;
+
+                            // intensità più soft e uniforme
+                            let distCenter = Math.min(Math.abs(l), 360 - Math.abs(l));
+                            let intens = 0.30 + 0.70 * (1.0 - Math.min(1, distCenter / 150));
+                            intens *= (1.0 - Math.abs(db) / 22);
+                            intens *= (0.7 + 0.3 * Math.sin(l * 0.09 + db * 0.25));
+                            intens = Math.max(0.06, Math.min(1, intens));
+
+                            if (coords.alt > -30 &&
+                                x > -500 && x < canvas.width + 500 &&
+                                y > -500 && y < canvas.height + 500) {
+                                pts.push({ x, y, intens, alt: coords.alt, l, db });
+                            }
+                        }
+                    }
+
+                    if (pts.length > 20) {
+                        // --- 1. Sfumature / nubi più larghe e spalmate ---
+                        for (const p of pts) {
+                            if (p.intens < 0.10) continue;
+                            const r = 32 + p.intens * 95;          // raggi più grandi
+                            const a = 0.028 + p.intens * 0.12;
+                            const g = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, r);
+                            g.addColorStop(0, `rgba(225, 205, 175, ${a})`);
+                            g.addColorStop(0.35, `rgba(180, 160, 130, ${a * 0.55})`);
+                            g.addColorStop(1, "rgba(0,0,0,0)");
+                            ctx.fillStyle = g;
+                            ctx.beginPath();
+                            ctx.arc(p.x, p.y, r, 0, Math.PI * 2);
+                            ctx.fill();
+                        }
+
+                        // --- 2. Campo stellare più ampio e soft ---
+                        for (const p of pts) {
+                            const n = Math.floor(3 + p.intens * 16);
+                            for (let s = 0; s < n; s++) {
+                                const seed = p.x * 12.9898 + p.y * 78.233 + s * 43.12 + p.l * 0.7;
+                                const r1 = Math.abs(Math.sin(seed) * 43758.5453) % 1;
+                                const r2 = Math.abs(Math.sin(seed * 1.618) * 23421.63) % 1;
+                                const r3 = Math.abs(Math.sin(seed * 2.718) * 9973.31) % 1;
+
+                                const spread = 42 + p.intens * 35;   // spread più largo
+                                const ox = (r1 - 0.5) * spread;
+                                const oy = (r2 - 0.5) * spread * 0.75;
+                                const size = 0.3 + r3 * 1.7 * (0.45 + p.intens);
+                                const alpha = 0.10 + r3 * 0.55 * p.intens;
+
+                                const sx = p.x + ox;
+                                const sy = p.y + oy;
+                                if (sx < -20 || sx > canvas.width + 20 || sy < -20 || sy > canvas.height + 20) continue;
+
+                                ctx.beginPath();
+                                ctx.fillStyle = `rgba(255, 245, 220, ${alpha})`;
+                                ctx.arc(sx, sy, size, 0, Math.PI * 2);
+                                ctx.fill();
+                            }
+                        }
+
+                        // --- 3. Nucleo centro galattico più soft e largo ---
+                        for (const p of pts) {
+                            if (p.intens > 0.65 && Math.abs(p.db) < 7) {
+                                const r = 45 + p.intens * 65;
+                                const g = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, r);
+                                g.addColorStop(0, "rgba(255, 235, 190, 0.16)");
+                                g.addColorStop(0.3, "rgba(220, 185, 130, 0.07)");
+                                g.addColorStop(1, "rgba(0,0,0,0)");
+                                ctx.fillStyle = g;
+                                ctx.beginPath();
+                                ctx.arc(p.x, p.y, r, 0, Math.PI * 2);
+                                ctx.fill();
+                            }
+                        }
+                    }
+                } catch (e) { /* ignore */ }
+            }
 
             // Griglia di altezza
             ctx.strokeStyle = "#330000";
