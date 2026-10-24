@@ -1,0 +1,927 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>AstroDSC Pro - Observatory Edition</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; touch-action: none; }
+        html, body {
+            width: 100%; height: 100%;
+            background-color: #000000 !important;
+            color: #ff2222;
+            font-family: 'Courier New', Courier, monospace;
+            overflow: hidden;
+            position: fixed;
+        }
+
+        #skyCanvas {
+            position: absolute; top: 0; left: 0;
+            width: 100%; height: 100%;
+            background-color: #000000 !important;
+            z-index: 1;
+            display: block;
+        }
+
+        /* HUD Superiore Professionale */
+        #hud-top {
+            position: absolute; top: 8px; left: 8px; right: 8px;
+            z-index: 10;
+            background: rgba(15, 0, 0, 0.92);
+            border: 1px solid #cc0000; border-radius: 6px;
+            padding: 6px 10px; font-size: 11px;
+            display: flex; justify-content: space-between; align-items: center;
+            color: #aa2222;
+            box-shadow: 0 0 10px rgba(204, 0, 0, 0.3);
+        }
+
+        .hud-val { color: #ff3333; font-weight: bold; }
+
+        .reset-target-btn {
+            background: #350000; color: #ff4444; border: 1px solid #ff0000;
+            padding: 2px 6px; border-radius: 4px; font-size: 10px; cursor: pointer;
+            margin-left: 6px; font-weight: bold;
+        }
+        .reset-target-btn:active { background: #660000; color: #fff; }
+
+        /* Barra di Navigazione Inferiore */
+        #hud-bottom-bar {
+            position: absolute; bottom: 16px; left: 50%;
+            transform: translateX(-50%);
+            z-index: 20;
+            background: rgba(18, 0, 0, 0.95);
+            border: 1px solid #880000; border-radius: 18px;
+            padding: 8px 12px;
+            display: flex; gap: 10px; align-items: center;
+            box-shadow: 0 4px 20px rgba(204, 0, 0, 0.4);
+        }
+
+        .nav-btn {
+            width: 56px; height: 56px; border-radius: 14px;
+            background: linear-gradient(135deg, #250000, #100000);
+            border: 1px solid #990000;
+            color: #ff4444; font-size: 22px;
+            display: flex; flex-direction: column;
+            align-items: center; justify-content: center;
+            cursor: pointer; transition: all 0.2s ease;
+            box-shadow: inset 0 1px 1px rgba(255,100,100,0.2), 0 2px 5px rgba(0,0,0,0.5);
+        }
+
+        .nav-btn:active, .nav-btn.active {
+            background: linear-gradient(135deg, #660000, #300000);
+            color: #ffffff; border-color: #ff0000;
+            box-shadow: 0 0 10px rgba(255, 0, 0, 0.6);
+            transform: scale(0.95);
+        }
+
+        .nav-icon { font-size: 20px; line-height: 1; }
+        .nav-label { font-size: 8px; margin-top: 3px; text-transform: uppercase; letter-spacing: 0.5px; }
+
+        /* Sottomenu a Tutto Schermo */
+        .slide-panel {
+            position: absolute; top: 10px; right: -110%; width: 96vw; max-width: 440px;
+            height: calc(100vh - 20px);
+            background: rgba(12, 0, 0, 0.98);
+            border: 1px solid #cc0000; border-radius: 14px;
+            z-index: 30; padding: 18px;
+            box-shadow: -5px 0 25px rgba(204, 0, 0, 0.6);
+            transition: right 0.35s cubic-bezier(0.1, 0.9, 0.2, 1);
+            display: flex; flex-direction: column; gap: 14px;
+            overflow-y: auto;
+        }
+
+        .slide-panel.open { right: 2vw; }
+
+        .panel-header {
+            display: flex; justify-content: space-between; align-items: center;
+            border-bottom: 1px solid #660000; padding-bottom: 10px;
+            font-size: 14px; font-weight: bold; color: #ff4444;
+        }
+
+        .back-btn {
+            background: #350000; color: #ff6666; border: 1px solid #ff0000;
+            padding: 6px 12px; border-radius: 8px; font-size: 10px; cursor: pointer;
+            font-family: inherit; font-weight: bold;
+        }
+        .back-btn:active { background: #660000; color: #fff; }
+
+        select, input[type="text"] {
+            background: #150000 !important;
+            color: #ff3333 !important;
+            border: 1px solid #990000 !important;
+            padding: 10px;
+            border-radius: 8px;
+            font-family: inherit; font-size: 12px;
+            width: 100%; outline: none;
+        }
+
+        .info-panel {
+            background: #140000; border: 1px solid #880000; padding: 12px;
+            border-radius: 8px; color: #dd3333; font-size: 11px; line-height: 1.5;
+        }
+
+        .filter-group { display: flex; gap: 6px; margin-top: 8px; }
+        .filter-tab { flex: 1; padding: 8px; font-size: 10px; background: #1a0000; border: 1px solid #880000; color: #aa3333; text-align: center; cursor: pointer; border-radius: 6px;}
+        .filter-tab.active { background: #550000; color: #ffffff; border-color: #ff0000; }
+
+        #bingo-banner {
+            position: absolute; top: 60px; left: 50%;
+            transform: translateX(-50%); z-index: 20;
+            background: rgba(35, 0, 0, 0.95); border: 1px solid #ff0000;
+            color: #ff4444; padding: 10px 18px; border-radius: 8px;
+            text-align: center; display: none; width: 85%; max-width: 320px;
+            box-shadow: 0 0 15px rgba(255, 0, 0, 0.6);
+        }
+    </style>
+</head>
+<body>
+
+    <div id="hud-top">
+        <div>GPS: <span id="gpsStatus" class="hud-val">45.05°, 9.69°</span></div>
+        <div>TGT: <span id="targetCoords" class="hud-val">--/--</span> <button class="reset-target-btn" onclick="resetTarget()" title="Annulla Target">✕</button></div>
+        <div>Δ: <span id="deltaCoords" class="hud-val">--/--</span></div>
+    </div>
+
+    <div id="bingo-banner">
+        <div style="font-size:14px; font-weight:bold; color:#ff0000;">[ TARGET CENTRATO - OK ]</div>
+        <div style="font-size:10px; margin-top:2px;" id="bingoInfo">Puntamento oculare raggiunto</div>
+    </div>
+
+    <canvas id="skyCanvas"></canvas>
+
+    <!-- Controlli Zoom Laterali -->
+    <div id="zoom-controls" style="position: absolute; right: 16px; bottom: 95px; z-index: 10; display: flex; flex-direction: column; gap: 8px;">
+        <button class="zoom-btn" onclick="zoomIn()" style="width: 46px; height: 46px; border-radius: 14px; font-size: 20px; background: linear-gradient(135deg, #250000, #100000); border: 1px solid #990000; color: #ff4444; cursor: pointer;">+</button>
+        <button class="zoom-btn" onclick="zoomOut()" style="width: 46px; height: 46px; border-radius: 14px; font-size: 20px; background: linear-gradient(135deg, #250000, #100000); border: 1px solid #990000; color: #ff4444; cursor: pointer;">−</button>
+        <button class="zoom-btn" onclick="resetZoom()" style="width: 46px; height: 46px; border-radius: 14px; font-size: 16px; background: linear-gradient(135deg, #250000, #100000); border: 1px solid #990000; color: #ff4444; cursor: pointer;" title="Reset">🏠</button>
+    </div>
+
+    <!-- BARRA NAVIGAZIONE INFERIORE -->
+    <div id="hud-bottom-bar">
+        <div class="nav-btn" onclick="openPanel('panel-menu')" title="Menu e Modalità">
+            <span class="nav-icon">⚙</span>
+            <span class="nav-label">Menu</span>
+        </div>
+        <div class="nav-btn" onclick="openPanel('panel-search')" title="Ricerca Rapida">
+            <span class="nav-icon">🔍</span>
+            <span class="nav-label">Cerca</span>
+        </div>
+        <div class="nav-btn" onclick="openPanel('panel-ephem')" title="Fase Lunare & Pianeti">
+            <span class="nav-icon">🌙</span>
+            <span class="nav-label">Efemp.</span>
+        </div>
+        <div class="nav-btn" onclick="openPanel('panel-tonight')" title="Cosa osservare stasera">
+            <span class="nav-icon">★</span>
+            <span class="nav-label">Stasera</span>
+        </div>
+        <div class="nav-btn" onclick="startObservationSession()" title="Start Sessione / Attiva Sensori">
+            <span class="nav-icon">🔭</span>
+            <span class="nav-label">Session</span>
+        </div>
+    </div>
+
+    <!-- SOTTOMENU: 1. MENU & MODALITÀ -->
+    <div id="panel-menu" class="slide-panel">
+        <div class="panel-header">
+            <span>⚙ MENU OPERATIVO</span>
+            <button class="back-btn" onclick="closePanels()">[ ← BACK ]</button>
+        </div>
+        <div class="info-panel">
+            <b>MODALITÀ DI FUNZIONAMENTO:</b>
+            <select id="modeSelect" onchange="toggleMode()" style="margin-top: 8px;">
+                <option value="simulation">🕹 Utilizzo Simulatore</option>
+                <option value="offline">🧭 Utilizzo Offline (Sensori)</option>
+                <option value="online">🌐 Utilizzo Online GitHub (Foto Sync)</option>
+            </select>
+        </div>
+        <div class="info-panel" style="margin-top: 10px;">
+            <b>VISUALIZZAZIONE:</b>
+            <button class="zoom-btn" id="constellationToggleBtn" onclick="toggleConstellations()" style="width: 100%; height: 42px; border-radius: 8px; font-size: 11px; background: #350000; border: 1px solid #ff0000; color: #ff6666; margin-top: 8px; cursor: pointer; font-weight: bold;">🌌 COSTELLAZIONI: ATTIVE</button>
+        </div>
+        <div class="info-panel" style="font-size: 10px; color: #aa3333; text-align: center; margin-top: auto;">
+            AstroDSC Pro v4.3 - Vignette Blend & Target Reset
+        </div>
+    </div>
+
+    <!-- SOTTOMENU: 2. RICERCA RAPIDA -->
+    <div id="panel-search" class="slide-panel">
+        <div class="panel-header">
+            <span>🔍 RICERCA OGGETTO / STELLA</span>
+            <button class="back-btn" onclick="closePanels()">[ ← BACK ]</button>
+        </div>
+        <input type="text" id="searchInput" placeholder="Cerca Sirio, Vega, M31, NGC..." oninput="filterCatalog()">
+        <select id="targetSelect" onchange="onSelectTarget()" size="12" style="height: 280px;"></select>
+        <div class="filter-group">
+            <div class="filter-tab active" onclick="setFilter('ALL', this)">TUTTI</div>
+            <div class="filter-tab" onclick="setFilter('Star', this)">STELLE</div>
+            <div class="filter-tab" onclick="setFilter('DSO', this)">DEEP SKY</div>
+            <div class="filter-tab" onclick="setFilter('Planet', this)">PIANETI</div>
+        </div>
+    </div>
+
+    <!-- SOTTOMENU: 3. EFEMERIDI -->
+    <div id="panel-ephem" class="slide-panel">
+        <div class="panel-header">
+            <span>🌙 FASE LUNARE & PIANETI</span>
+            <button class="back-btn" onclick="closePanels()">[ ← BACK ]</button>
+        </div>
+        <div class="info-panel">
+            🌙 <b>Fase Lunare:</b> <span id="moonPhase" class="hud-val">-</span> (<span id="moonIllum" class="hud-val">-</span>%)<br><br>
+            🪐 <b>Pianeti Visibili:</b> Giove, Saturno, Luna, Marte, Venere.
+        </div>
+    </div>
+
+    <!-- SOTTOMENU: 4. STASERA -->
+    <div id="panel-tonight" class="slide-panel">
+        <div class="panel-header">
+            <span>★ COSA OSSERVARE STASERA</span>
+            <button class="back-btn" onclick="closePanels()">[ ← BACK ]</button>
+        </div>
+        <div class="info-panel" style="margin-bottom: 6px;">Target visibili ordinati per altezza:</div>
+        <select id="tonightSelect" onchange="onSelectTonight()" size="12" style="height: 320px;"></select>
+    </div>
+
+    <script>
+        const catalogStars = [
+            { id: "Sirio", name: "Sirius (Alpha Canis Majoris)", type: "Star", ra: 6.75, dec: -16.71, mag: -1.46 },
+            { id: "Canopo", name: "Canopus (Alpha Carinae)", type: "Star", ra: 6.40, dec: -52.70, mag: -0.74 },
+            { id: "Arturo", name: "Arcturus (Alpha Boötis)", type: "Star", ra: 14.26, dec: 19.18, mag: -0.05 },
+            { id: "Vega", name: "Vega (Alpha Lyrae)", type: "Star", ra: 18.62, dec: 38.78, mag: 0.03 },
+            { id: "Capella", name: "Capella (Alpha Aurigae)", type: "Star", ra: 5.28, dec: 46.00, mag: 0.08 },
+            { id: "Rigel", name: "Rigel (Beta Orionis)", type: "Star", ra: 5.24, dec: -8.20, mag: 0.13 },
+            { id: "Procione", name: "Procyon (Alpha Canis Minoris)", type: "Star", ra: 7.65, dec: 5.22, mag: 0.38 },
+            { id: "Betelgeuse", name: "Betelgeuse (Alpha Orionis)", type: "Star", ra: 5.92, dec: 7.41, mag: 0.50 },
+            { id: "Altair", name: "Altair (Alpha Aquilae)", type: "Star", ra: 19.84, dec: 8.87, mag: 0.77 },
+            { id: "Aldebaran", name: "Aldebaran (Alpha Tauri)", type: "Star", ra: 4.60, dec: 16.51, mag: 0.85 },
+            { id: "Spica", name: "Spica (Alpha Virginis)", type: "Star", ra: 13.42, dec: -11.16, mag: 0.98 },
+            { id: "Antares", name: "Antares (Alpha Scorpii)", type: "Star", ra: 16.49, dec: -26.43, mag: 1.06 },
+            { id: "Polluce", name: "Pollux (Beta Geminorum)", type: "Star", ra: 7.76, dec: 28.03, mag: 1.14 },
+            { id: "Fomalhaut", name: "Fomalhaut (Alpha Piscis Austrini)", type: "Star", ra: 22.96, dec: -29.62, mag: 1.17 },
+            { id: "Deneb", name: "Deneb (Alpha Cygni)", type: "Star", ra: 20.69, dec: 45.28, mag: 1.25 },
+            { id: "Regolo", name: "Regulus (Alpha Leonis)", type: "Star", ra: 10.14, dec: 11.97, mag: 1.35 },
+            { id: "Castore", name: "Castor (Alpha Geminorum)", type: "Star", ra: 7.58, dec: 31.89, mag: 1.58 },
+            { id: "Bellatrix", name: "Bellatrix (Gamma Orionis)", type: "Star", ra: 5.42, dec: 6.35, mag: 1.64 },
+            { id: "Alnilam", name: "Alnilam (Epsilon Orionis)", type: "Star", ra: 5.60, dec: -1.20, mag: 1.69 },
+            { id: "Alnitak", name: "Alnitak (Zeta Orionis)", type: "Star", ra: 5.68, dec: -1.94, mag: 1.77 },
+            { id: "Alioth", name: "Alioth (Epsilon Ursae Majoris)", type: "Star", ra: 12.90, dec: 55.96, mag: 1.77 },
+            { id: "Dubhe", name: "Dubhe (Alpha Ursae Majoris)", type: "Star", ra: 11.06, dec: 61.75, mag: 1.79 },
+            { id: "Merak", name: "Merak (Beta Ursae Majoris)", type: "Star", ra: 11.03, dec: 56.38, mag: 2.37 },
+            { id: "Phecda", name: "Phecda (Gamma Ursae Majoris)", type: "Star", ra: 11.90, dec: 53.69, mag: 2.44 },
+            { id: "Megrez", name: "Megrez (Delta Ursae Majoris)", type: "Star", ra: 12.25, dec: 57.03, mag: 3.31 },
+            { id: "Mizar", name: "Mizar (Zeta Ursae Majoris)", type: "Star", ra: 13.40, dec: 54.92, mag: 2.23 },
+            { id: "Alkaid", name: "Alkaid (Eta Ursae Majoris)", type: "Star", ra: 13.79, dec: 49.31, mag: 1.86 },
+            { id: "Polaris", name: "Polaris (Alpha Ursae Minoris)", type: "Star", ra: 2.53, dec: 89.26, mag: 1.97 },
+            { id: "Shedar", name: "Shedar (Alpha Cassiopeiae)", type: "Star", ra: 0.68, dec: 56.54, mag: 2.24 },
+            { id: "Caph", name: "Caph (Beta Cassiopeiae)", type: "Star", ra: 0.15, dec: 59.15, mag: 2.28 },
+            { id: "GammaCas", name: "Gamma Cassiopeiae", type: "Star", ra: 0.94, dec: 60.72, mag: 2.15 },
+            { id: "Ruchbah", name: "Ruchbah (Delta Cassiopeiae)", type: "Star", ra: 1.43, dec: 60.24, mag: 2.68 },
+            { id: "Segin", name: "Segin (Epsilon Cassiopeiae)", type: "Star", ra: 1.90, dec: 63.67, mag: 3.35 },
+            { id: "Sheliak", name: "Sheliak (Beta Lyrae)", type: "Star", ra: 18.83, dec: 33.36, mag: 3.52 },
+            { id: "Sulafat", name: "Sulafat (Gamma Lyrae)", type: "Star", ra: 18.98, dec: 32.69, mag: 3.25 },
+            { id: "Sadr", name: "Sadr (Gamma Cygni)", type: "Star", ra: 20.37, dec: 40.26, mag: 2.23 }
+        ];
+
+        function pseudoRandom(seed) {
+            let x = Math.sin(seed) * 10000;
+            return x - Math.floor(x);
+        }
+
+        const fieldStars = [];
+        for (let i = 0; i < 220; i++) {
+            let r = pseudoRandom(i * 1.3) * 24;
+            let d = (pseudoRandom(i * 2.7) * 110) - 20;
+            let m = 4.0 + pseudoRandom(i * 4.1) * 2.0;
+            fieldStars.push({ id: `field_${i}`, name: `Campo ${i}`, type: "Field", ra: r, dec: d, mag: m, isField: true });
+        }
+
+        // Generazione statica fissa di stelle per la Via Lattea
+        const milkyWayStars = [];
+        for (let i = 0; i < 650; i++) {
+            let l = pseudoRandom(i * 3.1) * 360;
+            let b = (pseudoRandom(i * 7.4) - 0.5) * 22;
+            let mag = 4.2 + pseudoRandom(i * 1.9) * 2.8;
+            let eq = galacticToRaDec(l, b);
+            milkyWayStars.push({ ra: eq.ra, dec: eq.dec, mag: mag });
+        }
+
+        const constellationLines = [
+            ["Dubhe", "Merak"], ["Merak", "Phecda"], ["Phecda", "Megrez"], ["Megrez", "Dubhe"],
+            ["Megrez", "Alioth"], ["Alioth", "Mizar"], ["Mizar", "Alkaid"],
+            ["Caph", "Shedar"], ["Shedar", "GammaCas"], ["GammaCas", "Ruchbah"], ["Ruchbah", "Segin"],
+            ["Betelgeuse", "Bellatrix"], ["Bellatrix", "Rigel"], ["Rigel", "Alnitak"], ["Alnitak", "Betelgeuse"],
+            ["Alnitak", "Alnilam"],
+            ["Vega", "Sheliak"], ["Sheliak", "Sulafat"],
+            ["Deneb", "Sadr"]
+        ];
+
+        const rawCatalog = [
+            ...catalogStars,
+            { id: "M1", name: "Crab Nebula", type: "DSO", ra: 5.575, dec: 22.014, mag: 8.4, details: "Resto di Supernova (Toro)" },
+            { id: "M13", name: "Hercules Cluster", type: "DSO", ra: 16.695, dec: 36.460, mag: 5.8, details: "Ammasso Globulare Magnifico" },
+            { id: "M27", name: "Dumbbell Nebula", type: "DSO", ra: 19.996, dec: 22.721, mag: 7.4, details: "Nebulosa Planetaria (Vulpecula)" },
+            { id: "M31", name: "Andromeda Galaxy", type: "DSO", ra: 0.712, dec: 41.269, mag: 3.4, details: "Galassia Spirale Maggiore" },
+            { id: "M33", name: "Triangulum Galaxy", type: "DSO", ra: 1.564, dec: 30.660, mag: 5.7, details: "Galassia Spirale" },
+            { id: "M42", name: "Orion Nebula", type: "DSO", ra: 5.588, dec: -5.391, mag: 4.0, details: "Grande Nebulosa Diffusa" },
+            { id: "M45", name: "Pleiades (Le Pleiadi)", type: "DSO", ra: 3.791, dec: 24.105, mag: 1.6, details: "Ammasso Aperto (Taurus)" },
+            { id: "M51", name: "Whirlpool Galaxy", type: "DSO", ra: 13.498, dec: 47.195, mag: 8.4, details: "Galassia Interagente" },
+            { id: "M57", name: "Ring Nebula", type: "DSO", ra: 18.893, dec: 33.029, mag: 8.8, details: "Nebulosa Planetaria (Lyra)" },
+            { id: "M81", name: "Bode's Galaxy", type: "DSO", ra: 9.955, dec: 69.065, mag: 6.9, details: "Galassia Spirale (Ursa Major)" },
+            { id: "M82", name: "Cigar Galaxy", type: "DSO", ra: 9.930, dec: 69.680, mag: 8.4, details: "Galassia Starburst" },
+            { id: "NGC 7000", name: "North America Nebula", type: "DSO", ra: 20.980, dec: 44.333, mag: 4.0, details: "Nebulosa a Emissione (Cygnus)" },
+            { id: "Albireo", name: "Beta Cygni (Doppia Stretta)", type: "Star", ra: 19.512, dec: 27.960, mag: 3.0, details: "Sep: 34.8\" - Giallo/Azzurro" },
+            { id: "Epsilon Lyrae", name: "Double-Double", type: "Star", ra: 18.738, dec: 39.670, mag: 4.7, details: "Famosa Quadrupla" },
+            { id: "Luna", name: "Luna (Satellite)", type: "Planet", ra: 0.0, dec: 0.0, mag: -12.5, details: "Satellite Naturale" },
+            { id: "Giove", name: "Giove (Gigante Gassoso)", type: "Planet", ra: 3.200, dec: 16.800, mag: -2.2, details: "Pianeta + Satelliti Medicei" },
+            { id: "Saturno", name: "Saturno (Anelli)", type: "Planet", ra: 22.500, dec: -9.200, mag: 0.6, details: "Pianeta con Anelli" },
+            { id: "Marte", name: "Marte (Pianeta)", type: "Planet", ra: 4.500, dec: 20.000, mag: -1.0, details: "Pianeta Rosso" }
+        ];
+
+        let userLat = 45.05;
+        let userLon = 9.69;
+        let phoneAz = 0;
+        let phoneAlt = 45.05;
+        let fov = 100;
+        const FOV_THRESHOLD_FOR_IMAGE = 45;
+
+        let searchCategoryFilter = 'ALL';
+        let selectedTarget = null;
+        let canvas, ctx;
+        let operationMode = 'simulation';
+        let showConstellations = true;
+
+        const GITHUB_BASE_URL = "https://raw.githubusercontent.com/strongcda-hub/astro-dsc/main/messier/";
+        const imageCache = {};
+
+        function openPanel(panelId) {
+            document.querySelectorAll('.slide-panel').forEach(p => p.classList.remove('open'));
+            document.getElementById(panelId).classList.add('open');
+            if (panelId === 'panel-tonight') {
+                updateTonightDropdown();
+            }
+        }
+
+        function closePanels() {
+            document.querySelectorAll('.slide-panel').forEach(p => p.classList.remove('open'));
+        }
+
+        function toggleMode() {
+            operationMode = document.getElementById("modeSelect").value;
+        }
+
+        function toggleConstellations() {
+            showConstellations = !showConstellations;
+            const btn = document.getElementById("constellationToggleBtn");
+            btn.textContent = showConstellations ? "🌌 COSTELLAZIONI: ATTIVE" : "🌌 COSTELLAZIONI: DISattive";
+            btn.style.borderColor = showConstellations ? "#ff0000" : "#660000";
+        }
+
+        function zoomIn() { fov = Math.max(10, fov - 10); }
+        function zoomOut() { fov = Math.min(140, fov + 10); }
+        function resetZoom() { fov = 100; }
+
+        function resetTarget() {
+            selectedTarget = null;
+            const targetSelect = document.getElementById("targetSelect");
+            if (targetSelect) targetSelect.value = "";
+        }
+
+        function getLST() {
+            const now = new Date();
+            const jd = (now.getTime() / 86400000) + 2440587.5;
+            const d = jd - 2451545.0;
+            let gmst = 280.46061837 + 360.98564736629 * d;
+            gmst = gmst % 360;
+            if (gmst < 0) gmst += 360;
+            let lst = gmst + userLon;
+            return (lst % 360 + 360) % 360;
+        }
+
+        function updateEphemeris() {
+            const now = new Date();
+            const synodicMonth = 29.53058867;
+            const knownNewMoon = new Date(2000, 0, 6, 18, 14);
+            const daysSince = (now - knownNewMoon) / (1000 * 60 * 60 * 24);
+            const cyclePhase = (daysSince % synodicMonth) / synodicMonth;
+            const illumination = Math.round((1 - Math.cos(cyclePhase * 2 * Math.PI)) / 2 * 100);
+
+            let phaseName = cyclePhase < 0.03 || cyclePhase > 0.97 ? "Nuova" :
+                            cyclePhase < 0.22 ? "Crescente" :
+                            cyclePhase < 0.28 ? "Primo Quarto" :
+                            cyclePhase < 0.47 ? "Gibbosa Crescente" :
+                            cyclePhase < 0.53 ? "Piena" :
+                            cyclePhase < 0.72 ? "Gibbosa Calante" :
+                            cyclePhase < 0.78 ? "Ultimo Quarto" : "Calante";
+
+            document.getElementById("moonPhase").textContent = phaseName;
+            document.getElementById("moonIllum").textContent = illumination;
+        }
+
+        function raDecToAltAz(raHours, decDeg, lstDeg) {
+            const raDeg = raHours * 15;
+            const haDeg = (lstDeg - raDeg + 360) % 360;
+            const haRad = haDeg * Math.PI / 180;
+            const latRad = userLat * Math.PI / 180;
+            const decRad = decDeg * Math.PI / 180;
+
+            const sinAlt = Math.sin(decRad) * Math.sin(latRad) + Math.cos(decRad) * Math.cos(latRad) * Math.cos(haRad);
+            const altRad = Math.asin(Math.max(-1, Math.min(1, sinAlt)));
+            const altDeg = altRad * 180 / Math.PI;
+
+            let cosAz = (Math.sin(decRad) - Math.sin(latRad) * Math.sin(altRad)) / (Math.cos(latRad) * Math.cos(altRad));
+            cosAz = Math.max(-1, Math.min(1, cosAz));
+            let azRad = Math.acos(cosAz);
+            let azDeg = azRad * 180 / Math.PI;
+            if (Math.sin(haRad) > 0) azDeg = 360 - azDeg;
+
+            return { alt: altDeg, az: azDeg };
+        }
+
+        function altAzToRaDec(altDeg, azDeg, lstDeg) {
+            const altRad = altDeg * Math.PI / 180;
+            const azRad = azDeg * Math.PI / 180;
+            const latRad = userLat * Math.PI / 180;
+
+            const sinDec = Math.sin(altRad) * Math.sin(latRad) + Math.cos(altRad) * Math.cos(latRad) * Math.cos(azRad);
+            const decRad = Math.asin(Math.max(-1, Math.min(1, sinDec)));
+            const decDeg = decRad * 180 / Math.PI;
+
+            let cosHa = (Math.sin(altRad) - Math.sin(latRad) * Math.sin(decRad)) / (Math.cos(latRad) * Math.cos(decRad));
+            cosHa = Math.max(-1, Math.min(1, cosHa));
+            let haRad = Math.acos(cosHa);
+            if (Math.sin(azRad) > 0) haRad = -haRad;
+            let haDeg = haRad * 180 / Math.PI;
+
+            let raDeg = (lstDeg - haDeg + 360) % 360;
+            let raHours = raDeg / 15;
+            return { ra: raHours, dec: decDeg };
+        }
+
+        function raDecToGalactic(raDeg, decDeg) {
+            const ra = raDeg * Math.PI / 180;
+            const dec = decDeg * Math.PI / 180;
+            const raNGP = 192.85948 * Math.PI / 180;
+            const decNGP = 27.12825 * Math.PI / 180;
+            const lNCP = 122.93192 * Math.PI / 180;
+
+            const sinB = Math.sin(dec) * Math.sin(decNGP) + Math.cos(dec) * Math.cos(decNGP) * Math.cos(ra - raNGP);
+            const b = Math.asin(Math.max(-1, Math.min(1, sinB)));
+
+            const y = Math.cos(dec) * Math.sin(ra - raNGP);
+            const x = Math.sin(dec) * Math.cos(decNGP) - Math.cos(dec) * Math.sin(decNGP) * Math.cos(ra - raNGP);
+            let l = Math.atan2(y, x);
+            l = lNCP - l;
+            l = (l * 180 / Math.PI + 360) % 360;
+            return { l: l, b: b * 180 / Math.PI };
+        }
+
+        function galacticToRaDec(lDeg, bDeg) {
+            const l = lDeg * Math.PI / 180;
+            const b = bDeg * Math.PI / 180;
+            const raNGP = 192.85948 * Math.PI / 180;
+            const decNGP = 27.12825 * Math.PI / 180;
+            const lNCP = 122.93192 * Math.PI / 180;
+
+            const sinB = Math.sin(b);
+            const cosB = Math.cos(b);
+            const sinL = Math.sin(lNCP - l);
+            const cosL = Math.cos(lNCP - l);
+
+            const sinDec = sinB * Math.sin(decNGP) + cosB * Math.cos(decNGP) * cosL;
+            const dec = Math.asin(Math.max(-1, Math.min(1, sinDec)));
+
+            const y = cosB * sinL;
+            const x = sinB * Math.cos(decNGP) - cosB * Math.sin(decNGP) * cosL;
+            let ra = Math.atan2(y, x) + raNGP;
+            ra = (ra * 180 / Math.PI + 360) % 360;
+            return { ra: ra / 15, dec: dec * 180 / Math.PI };
+        }
+
+        function drawClippedLine(p1, p2) {
+            const margin = 20;
+            if (p1.x < -margin && p2.x < -margin) return;
+            if (p1.x > canvas.width + margin && p2.x > canvas.width + margin) return;
+            if (p1.y < -margin && p2.y < -margin) return;
+            if (p1.y > canvas.height + margin && p2.y > canvas.height + margin) return;
+
+            ctx.beginPath();
+            ctx.moveTo(p1.x, p1.y);
+            ctx.lineTo(p2.x, p2.y);
+            ctx.stroke();
+        }
+
+        function getOrLoadGitHubImage(id) {
+            let cleanId = id.replace(/\s+/g, '');
+            if (imageCache[cleanId] !== undefined) return imageCache[cleanId];
+
+            imageCache[cleanId] = 'loading';
+            let img = new Image();
+            img.crossOrigin = "anonymous";
+            img.src = `${GITHUB_BASE_URL}${cleanId}.jpg`;
+            img.onload = () => imageCache[cleanId] = img;
+            img.onerror = () => {
+                let imgPng = new Image();
+                imgPng.crossOrigin = "anonymous";
+                imgPng.src = `${GITHUB_BASE_URL}${cleanId}.png`;
+                imgPng.onload = () => imageCache[cleanId] = imgPng;
+                imgPng.onerror = () => imageCache[cleanId] = null;
+            };
+            return 'loading';
+        }
+
+        function drawSky() {
+            if (!canvas || !ctx) return;
+
+            ctx.fillStyle = "#000000";
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            const cx = canvas.width / 2;
+            const cy = canvas.height / 2;
+            const scale = Math.min(canvas.width, canvas.height) / fov;
+            const lst = getLST();
+            const now = Date.now();
+            const isBlinkOn = Math.floor(now / 350) % 2 === 0;
+
+            // ========== VIA LATTEA STATICA (STELLE PUNTIFORMI FISSE) ==========
+            ctx.fillStyle = "#882222";
+            milkyWayStars.forEach(s => {
+                let coords = raDecToAltAz(s.ra, s.dec, lst);
+                let dAz = coords.az - phoneAz;
+                while (dAz > 180) dAz -= 360;
+                while (dAz < -180) dAz += 360;
+                let dAlt = coords.alt - phoneAlt;
+
+                let x = cx + dAz * scale;
+                let y = cy - dAlt * scale;
+
+                if (coords.alt >= 0 && x >= -10 && x <= canvas.width + 10 && y >= -10 && y <= canvas.height + 10) {
+                    ctx.beginPath();
+                    let r = Math.max(0.6, 2.0 - s.mag * 0.3);
+                    ctx.arc(x, y, r, 0, 2 * Math.PI);
+                    ctx.fill();
+                }
+            });
+
+            // Griglia di altezza
+            ctx.strokeStyle = "#330000";
+            ctx.lineWidth = 1;
+            for (let a = 0; a <= 90; a += 15) {
+                ctx.beginPath();
+                ctx.arc(cx, cy, (90 - a) * scale, 0, 2 * Math.PI);
+                ctx.stroke();
+            }
+
+            // Linea dell'orizzonte
+            let horizonAlt0Y = cy + phoneAlt * scale;
+            if (horizonAlt0Y >= -500 && horizonAlt0Y <= canvas.height + 500) {
+                ctx.strokeStyle = "#cc0000";
+                ctx.lineWidth = 1.5;
+                ctx.beginPath();
+                ctx.moveTo(0, horizonAlt0Y);
+                ctx.lineTo(canvas.width, horizonAlt0Y);
+                ctx.stroke();
+
+                ctx.fillStyle = "#ff3333";
+                ctx.font = "10px monospace";
+                ctx.fillText("[ LINEA ORIZZONTE 0° ]", 12, horizonAlt0Y > 20 ? horizonAlt0Y - 6 : horizonAlt0Y + 16);
+            }
+
+            const starCoordsCache = {};
+            fieldStars.forEach(s => {
+                let coords = raDecToAltAz(s.ra, s.dec, lst);
+                let dAz = coords.az - phoneAz;
+                while (dAz > 180) dAz -= 360;
+                while (dAz < -180) dAz += 360;
+                let dAlt = coords.alt - phoneAlt;
+                starCoordsCache[s.id] = { x: cx + dAz * scale, y: cy - dAlt * scale, alt: coords.alt, mag: s.mag };
+            });
+
+            catalogStars.forEach(s => {
+                let coords = raDecToAltAz(s.ra, s.dec, lst);
+                let dAz = coords.az - phoneAz;
+                while (dAz > 180) dAz -= 360;
+                while (dAz < -180) dAz += 360;
+                let dAlt = coords.alt - phoneAlt;
+                starCoordsCache[s.id] = { x: cx + dAz * scale, y: cy - dAlt * scale, alt: coords.alt, mag: s.mag };
+            });
+
+            Object.values(starCoordsCache).forEach(s => {
+                if (s.isField && s.x >= -30 && s.x <= canvas.width + 30 && s.y >= -30 && s.y <= canvas.height + 30) {
+                    ctx.fillStyle = s.alt >= 0 ? "#cc2222" : "#440000";
+                    ctx.beginPath();
+                    let radius = Math.max(1, 2.5 - s.mag * 0.4);
+                    ctx.arc(s.x, s.y, radius, 0, 2 * Math.PI);
+                    ctx.fill();
+                }
+            });
+
+            // Disegno costellazioni
+            if (showConstellations) {
+                ctx.strokeStyle = "#770000";
+                ctx.lineWidth = 1.2;
+                constellationLines.forEach(line => {
+                    let s1 = starCoordsCache[line[0]];
+                    let s2 = starCoordsCache[line[1]];
+                    if (s1 && s2) drawClippedLine(s1, s2);
+                });
+            }
+
+            let targetScreenPos = null;
+
+            rawCatalog.forEach(obj => {
+                let coords = raDecToAltAz(obj.ra, obj.dec, lst);
+                let dAz = coords.az - phoneAz;
+                while (dAz > 180) dAz -= 360;
+                while (dAz < -180) dAz += 360;
+                let dAlt = coords.alt - phoneAlt;
+                let x = cx + dAz * scale;
+                let y = cy - dAlt * scale;
+
+                const isTarget = selectedTarget && selectedTarget.id === obj.id;
+                if (isTarget) targetScreenPos = { x: x, y: y };
+
+                if (x < -30 || x > canvas.width + 30 || y < -30 || y > canvas.height + 30) return;
+
+                let imageRendered = false;
+                if (operationMode === 'online' && fov <= FOV_THRESHOLD_FOR_IMAGE && isTarget && (obj.id.startsWith("M") || obj.id.startsWith("NGC"))) {
+                    let imgResult = getOrLoadGitHubImage(obj.id);
+                    if (imgResult && imgResult !== 'loading') {
+                        let imgSize = 220;
+                        ctx.save();
+                        ctx.beginPath();
+                        ctx.arc(x, y, imgSize / 2, 0, Math.PI * 2);
+                        ctx.clip();
+                        ctx.drawImage(imgResult, x - imgSize / 2, y - imgSize / 2, imgSize, imgSize);
+
+                        let gradient = ctx.createRadialGradient(x, y, imgSize * 0.2, x, y, imgSize * 0.5);
+                        gradient.addColorStop(0, 'rgba(0, 0, 0, 0)');
+                        gradient.addColorStop(1, 'rgba(0, 0, 0, 0.95)');
+                        ctx.fillStyle = gradient;
+                        ctx.fillRect(x - imgSize / 2, y - imgSize / 2, imgSize, imgSize);
+                        ctx.restore();
+
+                        imageRendered = true;
+                    }
+                }
+
+                if (!imageRendered) {
+                    if (isTarget && isBlinkOn) {
+                        ctx.strokeStyle = "#ff0000";
+                        ctx.lineWidth = 2.5;
+                        ctx.strokeRect(x - 12, y - 12, 24, 24);
+                    } else {
+                        ctx.strokeStyle = obj.type === "Planet" ? "#ff4444" : (obj.type === "Star" ? "#ff6666" : "#aa0000");
+                        ctx.fillStyle = obj.type === "Planet" ? "#ff4444" : (obj.type === "Star" ? "#ff6666" : "#aa0000");
+                        ctx.lineWidth = 1;
+                        if (obj.type === "DSO") {
+                            ctx.strokeRect(x - 4, y - 4, 8, 8);
+                        } else if (obj.type === "Star") {
+                            ctx.beginPath(); ctx.arc(x, y, Math.max(1.5, 4.0 - obj.mag * 0.4), 0, 2 * Math.PI); ctx.fill();
+                        } else {
+                            ctx.beginPath(); ctx.arc(x, y, 4, 0, 2 * Math.PI); ctx.fill();
+                        }
+                    }
+                }
+
+                ctx.fillStyle = "#ff4444";
+                ctx.font = "10px monospace";
+                ctx.fillText(obj.id, x + 6, y + 3);
+            });
+
+            // Reticolo centrale perfetto
+            ctx.strokeStyle = "#ff0000";
+            ctx.lineWidth = 1.5;
+            ctx.beginPath();
+            ctx.arc(cx, cy, 25, 0, 2 * Math.PI);
+            ctx.arc(cx, cy, 50, 0, 2 * Math.PI);
+            ctx.moveTo(cx - 60, cy); ctx.lineTo(cx - 15, cy);
+            ctx.moveTo(cx + 15, cy); ctx.lineTo(cx + 60, cy);
+            ctx.moveTo(cx, cy - 60); ctx.lineTo(cx, cy - 15);
+            ctx.moveTo(cx, cy + 15); ctx.lineTo(cx, cy + 60);
+            ctx.stroke();
+
+            if (selectedTarget) {
+                let tCoords = raDecToAltAz(selectedTarget.ra, selectedTarget.dec, lst);
+                let dAlt = tCoords.alt - phoneAlt;
+                let dAz = tCoords.az - phoneAz;
+                while (dAz > 180) dAz -= 360;
+                while (dAz < -180) dAz += 360;
+
+                document.getElementById("targetCoords").innerHTML = `${selectedTarget.id} (${tCoords.alt.toFixed(0)}°/${tCoords.az.toFixed(0)}°) <button class="reset-target-btn" onclick="resetTarget()" title="Annulla Target">✕</button>`;
+                document.getElementById("deltaCoords").textContent = `${dAlt.toFixed(1)}°/${dAz.toFixed(1)}°`;
+
+                let dist = Math.sqrt(dAlt * dAlt + dAz * dAz);
+                const banner = document.getElementById("bingo-banner");
+
+                if (dist <= 1.0) {
+                    banner.style.display = "block";
+                } else {
+                    banner.style.display = "none";
+                    if (targetScreenPos && isBlinkOn) {
+                        ctx.save();
+                        ctx.strokeStyle = "#ff0000";
+                        ctx.fillStyle = "#ff0000";
+                        ctx.lineWidth = 2;
+                        let angle = Math.atan2(targetScreenPos.y - cy, targetScreenPos.x - cx);
+                        let arrowX = cx + Math.cos(angle) * 70;
+                        let arrowY = cy + Math.sin(angle) * 70;
+
+                        ctx.beginPath();
+                        ctx.arc(arrowX, arrowY, 12, 0, 2 * Math.PI);
+                        ctx.stroke();
+                        ctx.beginPath();
+                        ctx.moveTo(arrowX + Math.cos(angle) * 14, arrowY + Math.sin(angle) * 14);
+                        ctx.lineTo(arrowX + Math.cos(angle + 2.5) * 7, arrowY + Math.sin(angle + 2.5) * 7);
+                        ctx.lineTo(arrowX + Math.cos(angle - 2.5) * 7, arrowY + Math.sin(angle - 2.5) * 7);
+                        ctx.fill();
+                        ctx.restore();
+                    }
+                }
+            } else {
+                document.getElementById("bingo-banner").style.display = "none";
+                document.getElementById("targetCoords").innerHTML = `--/-- <button class="reset-target-btn" onclick="resetTarget()" title="Annulla Target">✕</button>`;
+                document.getElementById("deltaCoords").textContent = `--/--`;
+            }
+        }
+
+        function animate() {
+            drawSky();
+            requestAnimationFrame(animate);
+        }
+
+        function updateTonightDropdown() {
+            const select = document.getElementById("tonightSelect");
+            if (!select) return;
+            const lst = getLST();
+            let visible = [];
+
+            rawCatalog.forEach((item, idx) => {
+                let coords = raDecToAltAz(item.ra, item.dec, lst);
+                if (coords.alt >= 0) visible.push({ index: idx, obj: item, alt: coords.alt });
+            });
+
+            visible.sort((a, b) => b.alt - a.alt);
+            select.innerHTML = '';
+            visible.forEach(v => {
+                let opt = document.createElement("option");
+                opt.value = v.index;
+                opt.textContent = `[Alt: ${v.alt.toFixed(0)}°] [${v.obj.type}] ${v.obj.id} - ${v.obj.name}`;
+                select.appendChild(opt);
+            });
+        }
+
+        function onSelectTonight() {
+            const val = document.getElementById("tonightSelect").value;
+            if (val !== "") {
+                selectedTarget = rawCatalog[val];
+                document.getElementById("targetSelect").value = val;
+                closePanels();
+            }
+        }
+
+        function populateSelect() {
+            const select = document.getElementById("targetSelect");
+            if (!select) return;
+            const query = (document.getElementById("searchInput")?.value || "").toLowerCase();
+            select.innerHTML = '';
+
+            rawCatalog.forEach((item, idx) => {
+                if (searchCategoryFilter !== 'ALL' && item.type !== searchCategoryFilter) return;
+                if (query && !item.id.toLowerCase().includes(query) && !item.name.toLowerCase().includes(query)) return;
+                let opt = document.createElement("option");
+                opt.value = idx;
+                opt.textContent = `[${item.type}] ${item.id} - ${item.name}`;
+                select.appendChild(opt);
+            });
+        }
+
+        function filterCatalog() { populateSelect(); }
+
+        function setFilter(type, btn) {
+            searchCategoryFilter = type;
+            document.querySelectorAll('.filter-tab').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            populateSelect();
+        }
+
+        function onSelectTarget() {
+            const val = document.getElementById("targetSelect").value;
+            selectedTarget = val === "" ? null : rawCatalog[val];
+            closePanels();
+        }
+
+        function resizeCanvas() {
+            canvas = document.getElementById("skyCanvas");
+            if (!canvas) return;
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+            ctx = canvas.getContext("2d");
+        }
+
+        /* GESTIONE SESSIONE E SENSORI */
+        function startObservationSession() {
+            closePanels();
+            if (operationMode === 'simulation') {
+                operationMode = 'offline';
+                document.getElementById("modeSelect").value = 'offline';
+            }
+
+            if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
+                DeviceOrientationEvent.requestPermission().then(res => {
+                    if (res === 'granted') {
+                        window.addEventListener('deviceorientation', handleOrientation, true);
+                    }
+                }).catch(console.error);
+            } else {
+                window.addEventListener('deviceorientation', handleOrientation, true);
+            }
+        }
+
+        function handleOrientation(e) {
+            if (operationMode === 'simulation') return;
+
+            let rawHeading = 0;
+            if (e.webkitCompassHeading !== undefined && e.webkitCompassHeading !== null) {
+                rawHeading = e.webkitCompassHeading;
+            } else if (e.alpha !== null) {
+                rawHeading = (360 - e.alpha) % 360;
+            }
+
+            phoneAz = (rawHeading + 180) % 360;
+
+            if (e.beta !== null) {
+                phoneAlt = e.beta;
+            }
+        }
+
+        window.onload = function() {
+            resizeCanvas();
+            window.addEventListener('resize', resizeCanvas);
+
+            let isDragging = false, startX, startY;
+
+            window.addEventListener('touchstart', e => {
+                if (e.target.tagName === 'CANVAS') {
+                    isDragging = true;
+                    startX = e.touches[0].clientX;
+                    startY = e.touches[0].clientY;
+                }
+            });
+
+            window.addEventListener('touchmove', e => {
+                if (!isDragging) return;
+                let dx = e.touches[0].clientX - startX;
+                let dy = e.touches[0].clientY - startY;
+
+                if (operationMode === 'simulation') {
+                    phoneAz = (phoneAz - dx * 0.2 + 360) % 360;
+                    phoneAlt = Math.max(-20, Math.min(90, phoneAlt + dy * 0.2));
+                }
+
+                startX = e.touches[0].clientX;
+                startY = e.clientY;
+            });
+
+            window.addEventListener('touchend', () => isDragging = false);
+
+            window.addEventListener('mousedown', e => {
+                if (e.target.tagName === 'CANVAS') {
+                    isDragging = true;
+                    startX = e.clientX;
+                    startY = e.clientY;
+                }
+            });
+
+            window.addEventListener('mousemove', e => {
+                if (!isDragging) return;
+                let dx = e.clientX - startX;
+                let dy = e.clientY - startY;
+
+                if (operationMode === 'simulation') {
+                    phoneAz = (phoneAz - dx * 0.2 + 360) % 360;
+                    phoneAlt = Math.max(-20, Math.min(90, phoneAlt + dy * 0.2));
+                }
+
+                startX = e.clientX;
+                startY = e.clientY;
+            });
+
+            window.addEventListener('mouseup', () => isDragging = false);
+
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(pos => {
+                    userLat = pos.coords.latitude;
+                    userLon = pos.coords.longitude;
+                    document.getElementById("gpsStatus").textContent = `${userLat.toFixed(2)}°, ${userLon.toFixed(2)}°`;
+                    updateEphemeris();
+                    updateTonightDropdown();
+                });
+            }
+
+            updateEphemeris();
+            populateSelect();
+            updateTonightDropdown();
+            animate();
+        };
+    </script>
+</body>
+</html>
